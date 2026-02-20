@@ -1,13 +1,19 @@
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from pydantic import BaseModel, Field
+from langchain.globals import set_verbose, set_debug
+from langchain_groq.chat_models import ChatGroq
+from langgraph.constants import END
+from langgraph.graph import StateGraph
+from langgraph.prebuilt import create_react_agent
 
 from agent.prompts import *
 from agent.states import *
-from langgraph.constants import END
-from langgraph.graph import StateGraph
+from agent.tools import write_file, read_file, get_current_directory, list_files
 
-load_dotenv()
+
+_ = load_dotenv()
+
+set_debug(True)
+set_verbose(True)
 
 llm = ChatGroq(model="openai/gpt-oss-120b")
 
@@ -32,14 +38,34 @@ def architect_agent(state: dict) -> dict:
 
 
 def coder_agent(state: dict) -> dict:
-    steps = state["task_plan"].implementation_steps
-    current_step_idx = 0
-    current_task = steps[current_step_idx]
-    user_prompt = f"Task:{current_task.task_description}\n"
-    system_prompt = coder_system_prompt()
-    resp = llm.invoke(system_prompt + user_prompt)
-    return {"code": resp.content}
+    """LangGraph tool-using coder agent."""
+    coder_state: CoderState = state.get("coder_state")
+    if coder_state is None:
+        coder_state = CoderState(task_plan=state["task_plan"], current_step_idx=0)
 
+    steps = coder_state.task_plan.implementation_steps
+    if coder_state.current_step_idx >= len(steps):
+        return {"coder_state": coder_state, "status": "DONE"}
+
+    current_task = steps[coder_state.current_step_idx]
+    existing_content = read_file.run(current_task.filepath)
+
+    system_prompt = coder_system_prompt()
+    user_prompt = (
+        f"Task: {current_task.task_description}\n"
+        f"File: {current_task.filepath}\n"
+        f"Existing content:\n{existing_content}\n"
+        "Use write_file(path, content) to save your changes."
+    )
+
+    coder_tools = [read_file, write_file, list_files, get_current_directory]
+    react_agent = create_react_agent(llm, coder_tools)
+
+    react_agent.invoke({"messages": [{"role": "system", "content": system_prompt},
+                                     {"role": "user", "content": user_prompt}]})
+
+    coder_state.current_step_idx += 1
+    return {"coder_state": coder_state}
 
 graph = StateGraph(dict)
 graph.add_node("planner", planner_agent)
