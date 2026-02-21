@@ -21,3 +21,7 @@ class TaskPlan(BaseModel):
     implementation_steps: list[ImplementationTask] = Field(description="A list of steps to be taken to implement the task")
     model_config = ConfigDict(extra="allow") # it will allow extra elements in class
     
+class CoderState(BaseModel):
+    task_plan: TaskPlan = Field(description="The plan for the task to be implemented")
+    current_step_idx: int = Field(0, description="The index of the current step in the implementation steps")
+    current_file_content: Optional[str] = Field(None, description="The content of the file currently being edited or created")

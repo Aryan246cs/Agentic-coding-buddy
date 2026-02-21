@@ -1,0 +1,239 @@
+/*
+  styles.css – Visual design and responsive layout for the Birthday Card
+  ---------------------------------------------------------------
+  Implements:
+  • Root pastel colour palette variables
+  • Global resets and animated gradient background
+  • Flex‑based card container with optional CSS‑grid fallback
+  • Responsive breakpoints (≥600px)
+  • Styled input & button with soft shadows and hover/focus states
+  • Message typography, hidden state and reveal animation
+  • Background gradient shift animation and subtle floating‑confetti effect
+*/
+
+/* ---------------------------------------------------------------
+   1. Root Variables – pastel palette
+   --------------------------------------------------------------- */
+:root {
+  /* Primary background – a gentle pastel blend */
+  --bg-primary: hsl(210, 60%, 95%);   /* light sky */
+  --bg-secondary: hsl(330, 60%, 95%); /* soft pink */
+
+  /* Accent colour used for interactive elements */
+  --accent: hsl(190, 55%, 70%);      /* pastel teal */
+
+  /* Text colours */
+  --text-primary: hsl(210, 15%, 20%); /* dark slate */
+  --text-secondary: hsl(330, 15%, 30%);
+
+  /* Border & shadow tones */
+  --border: hsl(210, 30%, 85%);
+  --shadow: hsla(210, 30%, 70%, 0.2);
+}
+
+/* ---------------------------------------------------------------
+   2. Global Styles – reset & animated gradient background
+   --------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+  background-size: 200% 200%;
+  animation: bgShift 15s infinite alternate ease-in-out;
+  overflow-x: hidden; /* prevent horizontal scroll from pseudo‑elements */
+}
+
+/* ---------------------------------------------------------------
+   3. Container Layout – #card
+   --------------------------------------------------------------- */
+#card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* Optional CSS‑grid fallback – if flex fails, grid will keep content centred */
+@supports (display: grid) {
+  #card {
+    display: grid;
+    place-items: center;
+  }
+}
+
+.title {
+  font-size: 2.2rem;
+  margin-bottom: 1.5rem;
+  color: var(--accent);
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 320px;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+/* ---------------------------------------------------------------
+   4. Responsive Breakpoints
+   --------------------------------------------------------------- */
+@media (min-width: 600px) {
+  .title {
+    font-size: 2.8rem;
+  }
+
+  .input-group {
+    flex-direction: row;
+    max-width: 480px;
+  }
+
+  #nameInput,
+  #submitBtn {
+    font-size: 1.1rem;
+  }
+}
+
+/* ---------------------------------------------------------------
+   5. Input & Button Styling
+   --------------------------------------------------------------- */
+#nameInput {
+  flex: 1;
+  padding: 0.6rem 0.9rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px var(--shadow);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#nameInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px hsla(190, 55%, 70%, 0.3);
+}
+
+#submitBtn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 2px 6px var(--shadow);
+  transition: background 0.3s, transform 0.2s;
+}
+
+#submitBtn:hover {
+  background: hsl(190, 55%, 65%);
+}
+
+#submitBtn:active {
+  transform: translateY(1px);
+}
+
+/* ---------------------------------------------------------------
+   6. Message Styling
+   --------------------------------------------------------------- */
+.message {
+  font-size: 1.8rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  max-width: 90%;
+  margin-top: 1rem;
+}
+
+.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* ---------------------------------------------------------------
+   7. Reveal Animation
+   --------------------------------------------------------------- */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.reveal {
+  animation: reveal 0.8s forwards;
+}
+
+/* ---------------------------------------------------------------
+   8. Background Animation – gradient shift & floating confetti
+   --------------------------------------------------------------- */
+@keyframes bgShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Simple confetti – two pseudo‑elements with tiny circles */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  top: -10vh;
+  left: 50%;
+  width: 150vw;
+  height: 150vh;
+  pointer-events: none;
+  background-repeat: repeat;
+  background-size: 30px 30px;
+  opacity: 0.07;
+  transform: translateX(-50%);
+}
+
+body::before {
+  background-image: radial-gradient(circle, var(--accent) 20%, transparent 20%);
+  animation: confettiFloat 12s linear infinite;
+}
+
+body::after {
+  background-image: radial-gradient(circle, var(--bg-secondary) 20%, transparent 20%);
+  animation: confettiFloat 15s linear infinite reverse;
+}
+
+@keyframes confettiFloat {
+  0% {
+    transform: translate(-50%, -10vh) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, 110vh) rotate(360deg);
+  }
+}
+
+/* ---------------------------------------------------------------
+   9. Footer – minimal styling to keep focus on card
+   --------------------------------------------------------------- */
+footer {
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
