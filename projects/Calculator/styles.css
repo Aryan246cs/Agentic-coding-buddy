@@ -1,0 +1,154 @@
+/*
+ * Calculator UI Styles
+ * -------------------------------------------------
+ * This stylesheet defines a clean, responsive layout for the
+ * simple BODMAS calculator. It uses CSS custom properties for
+ * easy theming, a modest box‑shadow for depth, and a grid‑based
+ * button layout that adapts from four columns on desktop to two
+ * columns on narrow viewports.
+ */
+
+:root {
+  /* Colour palette */
+  --color-bg: #f9f9f9;
+  --color-primary: #2c3e50;      /* Dark slate for text */
+  --color-accent: #3498db;       /* Accent colour for focus/active */
+  --color-error: #e74c3c;        /* Red for error messages */
+  --color-button-bg: #ecf0f1;    /* Light grey button background */
+  --color-button-hover: #bdc3c7;/* Slightly darker on hover */
+
+  /* Typography */
+  --font-size-base: 1rem;        /* 16px default */
+  --font-size-input: 1.5rem;     /* Larger for the expression field */
+  --font-size-button: 1.2rem;    /* Readable button text */
+
+  /* Spacing */
+  --spacing: 0.5rem;
+
+  /* Layout */
+  --max-width: 400px;
+}
+
+/* Global reset for consistency */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: var(--font-size-base);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--spacing);
+}
+
+.calculator {
+  background: #fff;
+  max-width: var(--max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: calc(var(--spacing) * 2);
+  border-radius: 0.8rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#expression {
+  width: 100%;
+  font-size: var(--font-size-input);
+  padding: var(--spacing);
+  border: 1px solid #ccc;
+  border-radius: 0.4rem;
+  margin-bottom: var(--spacing);
+  outline: none;
+}
+
+#expression:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+#result {
+  min-height: 2rem;               /* Reserve space for messages */
+  margin-top: var(--spacing);
+  font-size: 1.2rem;
+  color: var(--color-primary);
+}
+
+#result.error {
+  color: var(--color-error);
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing);
+  margin-top: var(--spacing);
+}
+
+button {
+  background: var(--color-button-bg);
+  border: none;
+  border-radius: 0.3rem;
+  font-size: var(--font-size-button);
+  padding: var(--spacing);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+button:hover,
+button:focus {
+  background: var(--color-button-hover);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Ensure the clear and equals buttons stand out */
+#clear {
+  background: var(--color-error);
+  color: #fff;
+}
+
+#clear:hover,
+#clear:focus {
+  background: #c0392b;
+}
+
+#equals {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+#equals:hover,
+#equals:focus {
+  background: #2980b9;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .calculator {
+    padding: var(--spacing);
+  }
+
+  .button-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  button {
+    font-size: 1rem;
+    padding: calc(var(--spacing) * 0.8);
+  }
+
+  #expression {
+    font-size: 1.2rem;
+  }
+}

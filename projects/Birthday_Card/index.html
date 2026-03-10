@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robin's 21st Birthday Card</title>
+    <link rel="stylesheet" href="styles/style.css" />
+    <script src="assets/confetti.js" defer></script>
+    <!-- html2canvas CDN for capturing the card as an image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-9+f6N0I3YcD+5T9M2s0E6jM1y1l7zO4V9GQhZB5xKZp4rP5WkU6W9JQGk5XQ6N2VYFvD+XK2c8Yc3E5dJj5bA==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+    <script src="scripts/main.js" defer></script>
+</head>
+<body>
+    <main id="card" class="card" role="region" aria-label="Robin's 21st Birthday Card">
+        <h1 id="greeting" class="greeting" aria-live="polite"></h1>
+        <p id="message" class="message"></p>
+        <canvas id="confetti-canvas" class="confetti-canvas" aria-hidden="true"></canvas>
+        <section class="actions">
+            <button id="download-btn" class="btn download" aria-label="Download card as PNG">Download</button>
+            <a id="share-twitter" class="btn share" href="#" aria-label="Share on Twitter">
+                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.3 4.3 0 001.88-2.38 8.59 8.59 0 01-2.72 1.04 4.28 4.28 0 00-7.29 3.9A12.14 12.14 0 013 4.79a4.28 4.28 0 001.33 5.71 4.24 4.24 0 01-1.94-.54v.05a4.28 4.28 0 003.44 4.2 4.3 4.3 0 01-1.93.07 4.28 4.28 0 003.99 2.97A8.58 8.58 0 012 19.54a12.07 12.07 0 006.55 1.92c7.86 0 12.16-6.51 12.16-12.16 0-.19-.01-.37-.02-.56A8.68 8.68 0 0024 5.5a8.44 8.44 0 01-2.54.7z" fill="currentColor"/>
+                </svg>
+            </a>
+            <a id="share-facebook" class="btn share" href="#" aria-label="Share on Facebook">
+                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M22 12a10 10 0 10-11.5 9.9v-7H8v-3h2.5V9.5c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.5 3h-2.3v7A10 10 0 0022 12z" fill="currentColor"/>
+                </svg>
+            </a>
+        </section>
+        <img src="assets/logo.png" alt="Custom logo" class="logo" aria-hidden="true" />
+    </main>
+</body>
+</html>

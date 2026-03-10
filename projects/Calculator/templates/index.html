@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple BODMAS Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <div class="calculator">
+        <input type="text" id="expression" placeholder="Enter expression" autocomplete="off" aria-label="Expression input" />
+        <div id="result" class="result" aria-live="polite"></div>
+        <div class="button-grid">
+            <!-- Digits -->
+            <button data-value="7">7</button>
+            <button data-value="8">8</button>
+            <button data-value="9">9</button>
+            <button data-value="(" aria-label="Open parenthesis">(</button>
+            <button data-value="4">4</button>
+            <button data-value="5">5</button>
+            <button data-value="6">6</button>
+            <button data-value=")" aria-label="Close parenthesis">)</button>
+            <button data-value="1">1</button>
+            <button data-value="2">2</button>
+            <button data-value="3">3</button>
+            <button data-value="+" aria-label="Add">+</button>
+            <button data-value="0">0</button>
+            <button data-value="." aria-label="Decimal point">.</button>
+            <button id="clear" data-value="C" aria-label="Clear">C</button>
+            <button data-value="-" aria-label="Subtract">-</button>
+            <button data-value="*" aria-label="Multiply">*</button>
+            <button data-value="/" aria-label="Divide">/</button>
+            <button data-value="^" aria-label="Exponent">^</button>
+            <button id="equals" data-value="=" aria-label="Equals">=</button>
+        </div>
+    </div>
+</body>
+</html>

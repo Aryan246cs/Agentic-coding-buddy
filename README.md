@@ -11,6 +11,8 @@ Give it a prompt like "create a birthday card website" and it will:
 
 ## How to Use
 
+### Option 1: CLI Mode
+
 1. Install dependencies:
 ```bash
 uv sync
@@ -27,6 +29,33 @@ python main.py
 ```
 
 4. Enter your project idea when prompted
+
+### Option 2: Web UI Mode
+
+1. Install backend dependencies:
+```bash
+uv sync
+pip install fastapi uvicorn
+```
+
+2. Install frontend dependencies:
+```bash
+cd frontend
+npm install
+```
+
+3. Start the backend API:
+```bash
+python api.py
+```
+
+4. In a new terminal, start the frontend:
+```bash
+cd frontend
+npm run dev
+```
+
+5. Open `http://localhost:5173` in your browser
 
 ## Project Structure
 
