@@ -1,64 +1,26 @@
-# ------------------------------
-# Python cache & compiled files
-# ------------------------------
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# ------------------------------
-# Virtual environments
-# ------------------------------
 .venv/
-venv/
-env/
-ENV/
-
-# ------------------------------
-# Environment variables / secrets
-# ------------------------------
-.env
-.env.*
-!.env.example
-
-# ------------------------------
-# Build / distribution
-# ------------------------------
-build/
-dist/
-wheels/
 *.egg-info/
-.eggs/
-
-# ------------------------------
-# Logs & temp files
-# ------------------------------
-*.log
-*.tmp
-*.swp
-.DS_Store
-
-# ------------------------------
-# Testing / coverage
-# ------------------------------
-.coverage
-.coverage.*
-htmlcov/
 .pytest_cache/
-.mypy_cache/
+.ruff_cache/
 
-# ------------------------------
-# Jupyter notebooks checkpoints
-# ------------------------------
-.ipynb_checkpoints/
+# Local database
+*.db
+*.db-wal
+*.db-shm
 
-# ------------------------------
-# IDE / editor files
-# ------------------------------
+# Node
+node_modules/
+dist/
+.vite/
+
+# Env & secrets
+.env
+.env.local
+*.local
+
+# OS / editor
+.DS_Store
 .vscode/
-.idea/
-*.code-workspace
-
-# ------------------------------
-# UV specific
-# ------------------------------
-.python-version

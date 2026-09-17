@@ -1,0 +1,143 @@
+{
+  "spec_version": 1,
+  "name": "Employee Leave Management",
+  "description": "Employees request leave, their manager approves or rejects it, and the employee is told the outcome.",
+  "entities": [
+    {
+      "name": "leave_requests",
+      "label": "Leave Request",
+      "label_plural": "Leave Requests",
+      "fields": [
+        {
+          "name": "leave_type",
+          "label": "Leave type",
+          "type": "choice",
+          "choices": ["Casual", "Sick", "Earned", "Unpaid"],
+          "required": true,
+          "is_title": true
+        },
+        { "name": "start_date", "label": "Starting from", "type": "date", "required": true },
+        {
+          "name": "days",
+          "label": "Number of days",
+          "type": "number",
+          "required": true,
+          "help_text": "How many working days you will be away"
+        },
+        { "name": "reason", "label": "Reason", "type": "long_text" },
+        {
+          "name": "status",
+          "label": "Status",
+          "type": "choice",
+          "choices": ["Pending", "Approved", "Rejected"],
+          "default": "Pending"
+        },
+        { "name": "decision_note", "label": "Manager's note", "type": "long_text" }
+      ]
+    }
+  ],
+  "roles": [
+    { "name": "employee", "label": "Employee", "description": "Requests leave and sees their own history." },
+    { "name": "manager", "label": "Manager", "description": "Approves or rejects leave requests." },
+    { "name": "admin", "label": "HR Admin", "is_admin": true }
+  ],
+  "screens": [
+    {
+      "key": "request_leave",
+      "title": "Request Leave",
+      "type": "form",
+      "entity": "leave_requests",
+      "roles": ["employee", "manager"],
+      "fields": ["leave_type", "start_date", "days", "reason"],
+      "submit_workflow": "leave_approval",
+      "icon": "calendar-plus"
+    },
+    {
+      "key": "my_requests",
+      "title": "My Requests",
+      "type": "table",
+      "entity": "leave_requests",
+      "roles": ["employee", "manager"],
+      "fields": ["leave_type", "start_date", "days", "status"],
+      "record_scope": "own",
+      "empty_text": "You have not requested any leave yet.",
+      "icon": "list"
+    },
+    {
+      "key": "pending_approvals",
+      "title": "Pending Approvals",
+      "type": "approvals",
+      "entity": "leave_requests",
+      "roles": ["manager"],
+      "fields": ["leave_type", "start_date", "days", "reason"],
+      "record_scope": "all",
+      "filters": { "status": "Pending" },
+      "empty_text": "Nothing is waiting on you.",
+      "icon": "inbox"
+    },
+    {
+      "key": "all_requests",
+      "title": "All Requests",
+      "type": "table",
+      "entity": "leave_requests",
+      "roles": ["manager"],
+      "fields": ["leave_type", "start_date", "days", "status", "decision_note"],
+      "record_scope": "all",
+      "icon": "table"
+    }
+  ],
+  "workflows": [
+    {
+      "key": "leave_approval",
+      "name": "Leave Approval",
+      "description": "Tell the manager, wait for their decision, record it, tell the employee.",
+      "trigger": { "type": "form_submission", "entity": "leave_requests" },
+      "steps": [
+        {
+          "id": "notify_manager",
+          "label": "Tell the manager a request is waiting",
+          "type": "notify_in_app",
+          "to": "manager",
+          "title": "New leave request",
+          "body": "{{ trigger.user.name }} requested {{ trigger.data.days }} day(s) of {{ trigger.data.leave_type }} leave starting {{ trigger.data.start_date }}."
+        },
+        {
+          "id": "manager_decision",
+          "label": "Wait for the manager's decision",
+          "type": "approval",
+          "role": "manager",
+          "entity": "leave_requests",
+          "record_id": "{{ trigger.record_id }}",
+          "prompt": "Approve this leave request?",
+          "on_approve": "mark_approved",
+          "on_reject": "mark_rejected"
+        },
+        {
+          "id": "mark_approved",
+          "label": "Mark the request approved",
+          "type": "update_record",
+          "entity": "leave_requests",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Approved" },
+          "next": "notify_employee"
+        },
+        {
+          "id": "mark_rejected",
+          "label": "Mark the request rejected",
+          "type": "update_record",
+          "entity": "leave_requests",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Rejected" }
+        },
+        {
+          "id": "notify_employee",
+          "label": "Tell the employee the outcome",
+          "type": "notify_in_app",
+          "to": "{{ trigger.user.id }}",
+          "title": "Your leave request was decided",
+          "body": "Your {{ trigger.data.leave_type }} leave request for {{ trigger.data.days }} day(s) starting {{ trigger.data.start_date }} has been reviewed."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "spec_version": 1,
+  "name": "Customer Complaint Desk",
+  "description": "Customers raise complaints. The system reads each one and decides how urgent it is, escalating serious ones to the manager and giving the rest to support staff.",
+  "entities": [
+    {
+      "name": "complaints",
+      "label": "Complaint",
+      "label_plural": "Complaints",
+      "fields": [
+        { "name": "subject", "label": "Subject", "type": "text", "required": true, "is_title": true },
+        { "name": "details", "label": "What went wrong", "type": "long_text", "required": true },
+        { "name": "customer_email", "label": "Your email", "type": "text", "required": true },
+        { "name": "order_ref", "label": "Order reference", "type": "text" },
+        {
+          "name": "priority",
+          "label": "Priority",
+          "type": "choice",
+          "choices": ["Urgent", "Normal", "Low"]
+        },
+        {
+          "name": "status",
+          "label": "Status",
+          "type": "choice",
+          "choices": ["New", "Assigned", "Escalated", "Resolved"],
+          "default": "New"
+        },
+        { "name": "resolution", "label": "How it was resolved", "type": "long_text" }
+      ]
+    }
+  ],
+  "roles": [
+    { "name": "customer", "label": "Customer", "description": "Raises complaints and tracks their own." },
+    { "name": "support", "label": "Support Agent", "description": "Works on normal complaints." },
+    { "name": "manager", "label": "Support Manager", "is_admin": true }
+  ],
+  "screens": [
+    {
+      "key": "raise_complaint",
+      "title": "Raise a Complaint",
+      "type": "form",
+      "entity": "complaints",
+      "roles": ["customer"],
+      "fields": ["subject", "details", "customer_email", "order_ref"],
+      "submit_workflow": "complaint_triage",
+      "icon": "message-square-warning"
+    },
+    {
+      "key": "my_complaints",
+      "title": "My Complaints",
+      "type": "table",
+      "entity": "complaints",
+      "roles": ["customer"],
+      "fields": ["subject", "status", "priority"],
+      "record_scope": "own",
+      "empty_text": "You have not raised any complaints.",
+      "icon": "list"
+    },
+    {
+      "key": "support_queue",
+      "title": "Support Queue",
+      "type": "table",
+      "entity": "complaints",
+      "roles": ["support"],
+      "fields": ["subject", "details", "priority", "status", "customer_email"],
+      "record_scope": "all",
+      "filters": { "status": "Assigned" },
+      "empty_text": "Nothing assigned right now.",
+      "icon": "inbox"
+    },
+    {
+      "key": "escalations",
+      "title": "Escalations",
+      "type": "table",
+      "entity": "complaints",
+      "roles": ["manager"],
+      "fields": ["subject", "details", "priority", "customer_email"],
+      "record_scope": "all",
+      "filters": { "status": "Escalated" },
+      "empty_text": "No escalations.",
+      "icon": "alert-triangle"
+    },
+    {
+      "key": "all_complaints",
+      "title": "All Complaints",
+      "type": "table",
+      "entity": "complaints",
+      "roles": ["support", "manager"],
+      "fields": ["subject", "priority", "status", "customer_email", "resolution"],
+      "record_scope": "all",
+      "icon": "table"
+    }
+  ],
+  "workflows": [
+    {
+      "key": "complaint_triage",
+      "name": "Complaint Triage",
+      "description": "Read the complaint, set its priority, then escalate or assign it.",
+      "trigger": { "type": "form_submission", "entity": "complaints" },
+      "steps": [
+        {
+          "id": "classify",
+          "label": "Work out how urgent this is",
+          "type": "ai_classify",
+          "input": "{{ trigger.data.subject }}. {{ trigger.data.details }}",
+          "categories": ["Urgent", "Normal", "Low"],
+          "output": "priority"
+        },
+        {
+          "id": "save_priority",
+          "label": "Save the priority on the complaint",
+          "type": "update_record",
+          "entity": "complaints",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "priority": "{{ vars.priority }}" }
+        },
+        {
+          "id": "is_urgent",
+          "label": "Is it urgent?",
+          "type": "condition",
+          "left": "{{ vars.priority }}",
+          "operator": "eq",
+          "right": "Urgent",
+          "if_true": "escalate",
+          "if_false": "assign_support"
+        },
+        {
+          "id": "escalate",
+          "label": "Escalate it to the manager",
+          "type": "update_record",
+          "entity": "complaints",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Escalated" },
+          "next": "notify_manager"
+        },
+        {
+          "id": "assign_support",
+          "label": "Put it in the support queue",
+          "type": "update_record",
+          "entity": "complaints",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Assigned" },
+          "next": "notify_support"
+        },
+        {
+          "id": "notify_manager",
+          "label": "Tell the manager",
+          "type": "notify_in_app",
+          "to": "manager",
+          "title": "Urgent complaint escalated",
+          "body": "'{{ trigger.data.subject }}' was marked urgent and needs your attention.",
+          "next": "acknowledge_customer"
+        },
+        {
+          "id": "notify_support",
+          "label": "Tell the support team",
+          "type": "notify_in_app",
+          "to": "support",
+          "title": "New complaint assigned",
+          "body": "'{{ trigger.data.subject }}' has been added to the support queue as {{ vars.priority }} priority."
+        },
+        {
+          "id": "acknowledge_customer",
+          "label": "Email the customer an acknowledgement",
+          "type": "notify_email",
+          "to": "{{ trigger.data.customer_email }}",
+          "subject": "We have received your complaint",
+          "body": "Thank you for telling us about '{{ trigger.data.subject }}'. We have logged it and someone will get back to you."
+        }
+      ]
+    }
+  ]
+}

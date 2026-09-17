@@ -1,0 +1,184 @@
+{
+  "spec_version": 1,
+  "name": "Expense Approval",
+  "description": "Employees claim expenses. Small amounts are approved automatically, mid-size ones need a manager, large ones need a director.",
+  "entities": [
+    {
+      "name": "expenses",
+      "label": "Expense Claim",
+      "label_plural": "Expense Claims",
+      "fields": [
+        { "name": "title", "label": "What was it for", "type": "text", "required": true, "is_title": true },
+        { "name": "amount", "label": "Amount (₹)", "type": "number", "required": true },
+        {
+          "name": "category",
+          "label": "Category",
+          "type": "choice",
+          "choices": ["Travel", "Food", "Equipment", "Software", "Other"],
+          "required": true
+        },
+        { "name": "spent_on", "label": "Date of expense", "type": "date", "required": true },
+        { "name": "notes", "label": "Notes", "type": "long_text" },
+        {
+          "name": "status",
+          "label": "Status",
+          "type": "choice",
+          "choices": ["Pending", "Approved", "Rejected"],
+          "default": "Pending"
+        },
+        {
+          "name": "approved_by",
+          "label": "Approved by",
+          "type": "choice",
+          "choices": ["Auto", "Manager", "Director"]
+        }
+      ]
+    }
+  ],
+  "roles": [
+    { "name": "employee", "label": "Employee", "description": "Submits expense claims." },
+    { "name": "manager", "label": "Manager", "description": "Approves claims up to ₹50,000." },
+    { "name": "director", "label": "Director", "description": "Approves claims above ₹50,000." },
+    { "name": "admin", "label": "Finance Admin", "is_admin": true }
+  ],
+  "screens": [
+    {
+      "key": "submit_expense",
+      "title": "Claim an Expense",
+      "type": "form",
+      "entity": "expenses",
+      "roles": ["employee", "manager", "director"],
+      "fields": ["title", "amount", "category", "spent_on", "notes"],
+      "submit_workflow": "expense_approval",
+      "icon": "receipt"
+    },
+    {
+      "key": "my_expenses",
+      "title": "My Claims",
+      "type": "table",
+      "entity": "expenses",
+      "roles": ["employee", "manager", "director"],
+      "fields": ["title", "amount", "category", "spent_on", "status"],
+      "record_scope": "own",
+      "empty_text": "You have not claimed any expenses yet.",
+      "icon": "list"
+    },
+    {
+      "key": "manager_queue",
+      "title": "Awaiting My Approval",
+      "type": "approvals",
+      "entity": "expenses",
+      "roles": ["manager", "director"],
+      "fields": ["title", "amount", "category", "spent_on", "notes"],
+      "record_scope": "all",
+      "filters": { "status": "Pending" },
+      "empty_text": "Nothing is waiting on you.",
+      "icon": "inbox"
+    },
+    {
+      "key": "all_expenses",
+      "title": "All Claims",
+      "type": "table",
+      "entity": "expenses",
+      "roles": ["manager", "director"],
+      "fields": ["title", "amount", "category", "status", "approved_by"],
+      "record_scope": "all",
+      "icon": "table"
+    }
+  ],
+  "workflows": [
+    {
+      "key": "expense_approval",
+      "name": "Expense Approval",
+      "description": "Route the claim by amount, record the decision, tell the claimant.",
+      "trigger": { "type": "form_submission", "entity": "expenses" },
+      "steps": [
+        {
+          "id": "check_small",
+          "label": "Is it under ₹5,000?",
+          "type": "condition",
+          "left": "{{ trigger.data.amount }}",
+          "operator": "lt",
+          "right": 5000,
+          "if_true": "auto_approve",
+          "if_false": "check_medium"
+        },
+        {
+          "id": "check_medium",
+          "label": "Is it ₹50,000 or under?",
+          "type": "condition",
+          "left": "{{ trigger.data.amount }}",
+          "operator": "lte",
+          "right": 50000,
+          "if_true": "manager_approval",
+          "if_false": "director_approval"
+        },
+        {
+          "id": "auto_approve",
+          "label": "Approve it automatically",
+          "type": "update_record",
+          "entity": "expenses",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Approved", "approved_by": "Auto" },
+          "next": "notify_employee"
+        },
+        {
+          "id": "manager_approval",
+          "label": "Wait for the manager",
+          "type": "approval",
+          "role": "manager",
+          "entity": "expenses",
+          "record_id": "{{ trigger.record_id }}",
+          "prompt": "Approve this expense claim?",
+          "on_approve": "record_manager_approval",
+          "on_reject": "mark_rejected"
+        },
+        {
+          "id": "director_approval",
+          "label": "Wait for the director",
+          "type": "approval",
+          "role": "director",
+          "entity": "expenses",
+          "record_id": "{{ trigger.record_id }}",
+          "prompt": "This claim is above ₹50,000. Approve it?",
+          "on_approve": "record_director_approval",
+          "on_reject": "mark_rejected"
+        },
+        {
+          "id": "record_manager_approval",
+          "label": "Mark it approved by the manager",
+          "type": "update_record",
+          "entity": "expenses",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Approved", "approved_by": "Manager" },
+          "next": "notify_employee"
+        },
+        {
+          "id": "record_director_approval",
+          "label": "Mark it approved by the director",
+          "type": "update_record",
+          "entity": "expenses",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Approved", "approved_by": "Director" },
+          "next": "notify_employee"
+        },
+        {
+          "id": "mark_rejected",
+          "label": "Mark it rejected",
+          "type": "update_record",
+          "entity": "expenses",
+          "record_id": "{{ trigger.record_id }}",
+          "values": { "status": "Rejected" }
+        },
+        {
+          "id": "notify_employee",
+          "label": "Tell the claimant the outcome",
+          "type": "notify_in_app",
+          "to": "{{ trigger.user.id }}",
+          "title": "Your expense claim was decided",
+          "body": "Your claim '{{ trigger.data.title }}' for ₹{{ trigger.data.amount }} has been reviewed."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1397 @@
+AI-NATIVE NO-CODE APPLICATION & WORKFLOW BUILDER
+
+Product Context, Vision, Scope, Architecture, UX, MVP and Implementation Brief
+
+Document purpose: This document is the primary product and engineering
+context for building the project with Claude Code. It describes what the
+product is, what problem it solves, how it should behave, what the user
+experience should look like, what the core architecture should be, what
+should and should not be built in the MVP, and what a realistic
+end-to-end deployed version should accomplish.
+
+IMPORTANT: This is NOT a plan to build another Lovable, Bolt, v0,
+Replit, or generic AI website/code generator. The product should be
+intentionally constrained and architecture-driven so that one developer
+can build and deploy it.
+
+====================================================================== 1.
+PRODUCT IDEA
+======================================================================
+
+Working description:
+
+An AI-native no-code platform where a user describes a small business
+application or operational process in natural language, and the platform
+converts that description into a runnable application composed from a
+controlled set of reusable primitives.
+
+The platform should generate:
+
+1.  Application structure
+2.  Pages and UI
+3.  Forms and tables
+4.  Database entities
+5.  Users and roles
+6.  Permissions
+7.  Business rules
+8.  Workflows
+9.  AI actions/agents where useful
+10. Notifications
+11. Workflow execution and logs
+12. A live preview
+13. A publishable/shareable URL
+
+The key architectural idea is:
+
+THE LLM DOES NOT DIRECTLY GENERATE AND DEPLOY AN ARBITRARY CODEBASE.
+
+Instead:
+
+Natural-language requirement -> AI planner -> Structured Application
+Specification -> Structured Workflow Specification -> Validation ->
+Deterministic runtime -> Runnable application
+
+This is critical.
+
+The product is a “Lego” application builder, not an unrestricted code
+generator.
+
+The AI chooses and configures a finite set of supported primitives. The
+platform runtime renders those primitives and executes the resulting
+workflows.
+
+======================================================================
+2. THE PROBLEM
+======================================================================
+
+Small businesses, freelancers, student organizations, agencies, and
+non-technical teams often know exactly what process they want to
+digitize but do not know how to build software for it.
+
+For example:
+
+“I run a small company. Employees should submit leave requests. Managers
+should approve or reject them. Employees should see their history.
+Managers should receive notifications.”
+
+Today, a person may need to understand:
+
+-   frontend development
+-   backend development
+-   databases
+-   authentication
+-   role-based access
+-   APIs
+-   workflow automation
+-   notifications
+-   deployment
+-   hosting
+-   DNS
+-   integrations
+
+Traditional no-code tools reduce some of the programming burden, but
+users may still need to manually design the application and workflow.
+
+AI code/app builders reduce the coding burden, but they commonly operate
+around generating an application/codebase rather than giving a simple
+business user a constrained, predictable application runtime and
+workflow engine.
+
+The opportunity:
+
+A user should be able to describe WHAT they want their small business
+system to do without having to understand HOW it should be implemented.
+
+======================================================================
+3. CORE PRODUCT THESIS
+======================================================================
+
+The product should be positioned around:
+
+“Describe how your business works. Get the software that runs it.”
+
+The platform is not primarily selling AI-generated code.
+
+It is selling:
+
+-   speed
+-   simplicity
+-   ready-to-use internal applications
+-   business workflow automation
+-   no-code configuration
+-   AI-assisted setup
+-   a live runnable system
+
+The central technical concept is:
+
+NATURAL LANGUAGE -> EXECUTABLE APPLICATION SPECIFICATION
+
+The LLM acts as a planner/translator.
+
+The platform runtime is responsible for actual execution.
+
+======================================================================
+4. WHAT THE USER CAN BUILD
+======================================================================
+
+The MVP should focus on small business/internal operational
+applications.
+
+Examples:
+
+1.  Employee Leave Management
+2.  Expense Approval
+3.  Customer Complaint/Ticket Management
+4.  Lead Management
+5.  Simple CRM
+6.  Appointment/Booking Management
+7.  Inventory Request System
+8.  Purchase Approval
+9.  Employee Onboarding
+10. Simple Project/Task Management
+
+Do NOT promise that the platform can build any arbitrary software.
+
+The product should explicitly work best for applications composed from:
+
+-   forms
+-   tables
+-   dashboards
+-   records
+-   users
+-   roles
+-   permissions
+-   approval steps
+-   conditions
+-   notifications
+-   AI actions
+-   API/webhook actions
+
+======================================================================
+5. PRIMARY EXAMPLE: EMPLOYEE LEAVE MANAGEMENT
+======================================================================
+
+This should be one of the main demo applications.
+
+User prompt:
+
+“I want an employee leave management system. Employees should log in and
+request leave. Managers should be able to see pending requests and
+approve or reject them. Employees should see their leave history. When a
+request is approved or rejected, the employee should be notified.”
+
+The AI should understand this as:
+
+APPLICATION: Employee Leave Management
+
+USERS: - Employee - Manager
+
+PAGES: - Login - Employee Dashboard - Request Leave - Leave History -
+Manager Dashboard - Pending Approvals
+
+DATABASE ENTITIES: - Users - Leave Requests - Leave Balances
+
+WORKFLOW: Employee submits request -> Create leave request -> Notify
+manager -> Wait for manager decision -> IF approved: update request
+status update leave balance notify employee IF rejected: update request
+status notify employee
+
+PERMISSIONS: Employee: - create leave request - view own requests - view
+own balance - cannot approve requests
+
+Manager: - view team requests - approve/reject requests - cannot modify
+unrelated application data
+
+The result should be a real, functioning application, not a mockup.
+
+======================================================================
+6. SECOND EXAMPLE: CUSTOMER COMPLAINT SYSTEM
+======================================================================
+
+User prompt:
+
+“Create a customer complaint system. Customers can submit complaints.
+The system should classify complaints using AI. Urgent complaints should
+notify the manager, while normal complaints should be assigned to
+support staff. Customers should be able to track the status.”
+
+The system generates:
+
+PAGES: - Customer Login - Submit Complaint - My Complaints - Support
+Dashboard - Manager Dashboard
+
+DATA: - Users - Customers - Complaints - Categories - Assignments
+
+WORKFLOW:
+
+Complaint Submitted -> Store complaint -> AI Classification -> Determine
+priority -> IF urgent: notify manager escalate ELSE: assign support
+agent -> Update status -> Notify customer
+
+This demonstrates why the platform is more than a UI builder.
+
+======================================================================
+7. THIRD EXAMPLE: EXPENSE APPROVAL
+======================================================================
+
+User prompt:
+
+“Employees can submit expenses. Expenses below 5000 should be
+automatically approved. Expenses between 5000 and 50000 require manager
+approval. Expenses above 50000 require director approval. The employee
+should be notified of the final decision.”
+
+Generated workflow:
+
+Expense Submitted -> Store Expense -> Check Amount
+
+IF amount < 5000: Auto Approve
+
+ELSE IF amount <= 50000: Manager Approval
+
+ELSE: Director Approval
+
+    ->
+
+Update Expense Status -> Notify Employee
+
+This is a strong demonstration of conditions, branching and approvals.
+
+======================================================================
+8. THE APPLICATION MODEL
+======================================================================
+
+Every generated application should be represented as structured data.
+
+Conceptually:
+
+Application - id - owner_id - name - description - status - theme -
+configuration
+
+Pages - id - application_id - name - route - layout - components -
+permissions
+
+Entities - id - application_id - name - fields - relationships
+
+Roles - id - application_id - name - permissions
+
+Workflows - id - application_id - name - trigger - nodes - edges -
+status
+
+Integrations - id - application_id - provider - configuration
+
+This is a conceptual model. The final database schema should be
+normalized appropriately.
+
+======================================================================
+9. APPLICATION PRIMITIVES
+======================================================================
+
+The MVP should have a deliberately small set of primitives.
+
+UI primitives:
+
+-   Form
+-   Table
+-   Dashboard
+-   Detail View
+-   List
+-   Kanban (optional if time permits)
+-   Navigation
+-   Button
+-   Modal
+-   Status badge
+-   Approval panel
+
+Data primitives:
+
+-   Entity
+-   Field
+-   Relationship
+-   Record
+-   Query
+
+Workflow primitives:
+
+-   Trigger
+-   Action
+-   Condition
+-   Branch
+-   Approval
+-   Delay/Wait
+-   AI Action
+-   Notification
+-   Webhook
+-   Database operation
+
+Auth primitives:
+
+-   Login
+-   User
+-   Role
+-   Permission
+
+The LLM should select from these primitives rather than inventing
+arbitrary components.
+
+======================================================================
+10. WORKFLOW ORCHESTRATION
+======================================================================
+
+Workflow orchestration is the execution system behind the generated
+applications.
+
+A workflow is a graph of nodes.
+
+Example:
+
+[Form Submitted] | v [Create Record] | v [AI Classify] | v [Condition] /
+/
+High Normal | | v v [Notify] [Assign] | | +—-+—–+ | v [Complete]
+
+The orchestrator is responsible for:
+
+-   determining execution order
+-   passing data between nodes
+-   evaluating conditions
+-   invoking actions
+-   calling AI actions
+-   handling errors
+-   retrying where appropriate
+-   waiting for human approvals
+-   recording execution history
+-   stopping failed workflows safely
+
+Important: Do not over-engineer this into a distributed workflow
+platform for the MVP.
+
+A database-backed workflow engine with deterministic execution is
+sufficient.
+
+======================================================================
+11. AI VS DETERMINISTIC EXECUTION
+======================================================================
+
+This distinction is fundamental.
+
+Use AI for:
+
+-   interpreting natural-language requirements
+-   generating application specifications
+-   generating workflow specifications
+-   classifying text
+-   extracting structured information
+-   summarization
+-   deciding between explicitly permitted AI actions
+
+Use deterministic code for:
+
+-   authentication
+-   authorization
+-   database CRUD
+-   conditions
+-   workflow state
+-   record updates
+-   notifications where possible
+-   retries
+-   execution logs
+-   application routing
+
+Do NOT let an LLM arbitrarily execute database queries or sensitive
+actions.
+
+The LLM should produce structured, validated instructions.
+
+======================================================================
+12. WORKFLOW SPECIFICATION
+======================================================================
+
+The AI should produce a strict structured representation.
+
+Conceptual example:
+
+workflow: name: Leave Approval
+
+trigger: type: form_submission source: leave_request
+
+nodes: - id: create_request type: database.create entity: leave_requests
+
+    - id: notify_manager
+      type: notification
+      channel: in_app
+
+    - id: manager_approval
+      type: approval
+      role: manager
+
+    - id: update_status
+      type: database.update
+
+    - id: notify_employee
+      type: notification
+      channel: in_app
+
+edges: create_request -> notify_manager notify_manager ->
+manager_approval manager_approval -> update_status update_status ->
+notify_employee
+
+This is illustrative only. Use a proper validated schema in
+implementation.
+
+The system should validate:
+
+-   node types
+-   required properties
+-   allowed transitions
+-   referenced entities
+-   referenced roles
+-   permissions
+-   data types
+
+======================================================================
+13. APPLICATION GENERATION PIPELINE
+======================================================================
+
+Recommended pipeline:
+
+STEP 1: User enters natural-language description.
+
+STEP 2: Requirement Planner analyzes the description.
+
+STEP 3: Generate a structured Application Specification.
+
+STEP 4: Generate a structured Workflow Specification.
+
+STEP 5: Validate specifications against supported primitives.
+
+STEP 6: Show the user a “Plan” before generation.
+
+Example:
+
+Application: Employee Leave Management
+
+Users: Employee, Manager
+
+Pages: 6
+
+Data entities: 3
+
+Workflows: 2
+
+Integrations: None
+
+STEP 7: User clicks “Build”.
+
+STEP 8: Runtime creates application configuration.
+
+STEP 9: Seed required data/configuration.
+
+STEP 10: Open live preview.
+
+STEP 11: Allow user to test workflows.
+
+STEP 12: Allow user to publish.
+
+======================================================================
+14. USER EXPERIENCE
+======================================================================
+
+The product should feel modern and minimal.
+
+Home/dashboard:
+
+-   Create Application
+-   Recent Applications
+-   Templates
+-   Published Applications
+
+Create flow:
+
+1.  Describe what you want to build.
+2.  AI analyzes it.
+3.  Show generated plan.
+4.  User edits/approves plan.
+5.  Build application.
+6.  Preview application.
+7.  Edit using natural language and/or visual controls.
+8.  Test workflow.
+9.  Publish.
+
+Example create screen:
+
+“What do you want to build?”
+
+Large input:
+
+“I need a simple employee leave management system…”
+
+Button:
+
+[Generate Plan]
+
+Then show:
+
+“Here’s what I understood.”
+
+Users - Employee - Manager
+
+Pages - Employee Dashboard - Request Leave - Leave History - Manager
+Dashboard
+
+Workflows - Leave Approval - Leave Rejection
+
+Button: [Build Application]
+
+======================================================================
+15. APPLICATION BUILDER UI
+======================================================================
+
+After generation, use a workspace layout.
+
+Suggested navigation:
+
+Overview Pages Data Workflows Users & Roles Integrations Executions
+Settings
+
+The main area should show the generated application.
+
+Potential layout:
+
+LEFT SIDEBAR: Application navigation
+
+CENTER: Live application preview/editor
+
+RIGHT: Contextual configuration panel
+
+The user should be able to select a page/component and change:
+
+-   title
+-   fields
+-   labels
+-   visibility
+-   role access
+-   appearance
+-   data source
+
+======================================================================
+16. WORKFLOW BUILDER UI
+======================================================================
+
+Provide a visual workflow canvas.
+
+Example:
+
+Leave Approval
+
+[Employee submits leave] | v [Create Leave Request] | v [Notify Manager]
+| v [Manager Approval] /
+/
+Approved Rejected | | v v [Update DB] [Update DB] | | +——+——-+ | v
+[Notify Employee]
+
+The user should be able to:
+
+-   add nodes
+-   delete nodes
+-   reconnect nodes
+-   edit conditions
+-   change actions
+-   configure notifications
+-   test execution
+
+AI should also be able to modify the workflow through natural language.
+
+Example:
+
+“Add a second approval if the leave is more than 7 days.”
+
+AI modifies the workflow specification.
+
+======================================================================
+17. WORKFLOW SIMULATION
+======================================================================
+
+This should be one of the signature features.
+
+Before publishing, the user can click:
+
+[Run Test]
+
+They provide sample input.
+
+Example:
+
+Employee: Aryan
+
+Leave: Casual Leave
+
+Duration: 3 days
+
+The system executes the workflow in a safe test environment.
+
+Show:
+
+Execution #001
+
+✓ Form submission received ✓ Leave request created ✓ Manager identified
+✓ Manager notification created ✓ Approval step reached ✓ Test manager
+approved ✓ Leave balance updated ✓ Employee notification created
+
+Result: Workflow completed successfully.
+
+This makes the system highly demonstrable and helps users trust
+generated workflows.
+
+======================================================================
+18. EXECUTION LOGS / OBSERVABILITY
+======================================================================
+
+Every workflow execution should have a record.
+
+Example:
+
+Execution: Leave Approval #284
+
+Status: Completed
+
+Started: 10:32:01
+
+Duration: 2.4 seconds
+
+Steps:
+
+1.  Trigger
+2.  Create Record
+3.  Notify Manager
+4.  Approval
+5.  Update Database
+6.  Notify Employee
+
+If an execution fails:
+
+Status: Failed
+
+Node: Send Notification
+
+Reason: Provider/API error
+
+Potential action: Retry
+
+For MVP, simple execution logs are sufficient.
+
+======================================================================
+19. PUBLISHING MODEL
+======================================================================
+
+CRITICAL ARCHITECTURAL DECISION:
+
+Do NOT deploy a brand-new server/application infrastructure for every
+generated app in the MVP.
+
+All generated applications should run on the same platform runtime.
+
+Conceptually:
+
+                 YOUR PLATFORM
+                      |
+        +-------------+-------------+
+        |             |             |
+      App A         App B         App C
+     tenant=1      tenant=2      tenant=3
+        |             |             |
+        +-------------+-------------+
+                      |
+               Shared Runtime
+                      |
+                 PostgreSQL
+
+An application is primarily configuration/data interpreted by the
+runtime.
+
+Publishing means:
+
+application.status = “published”
+
+The platform then exposes a URL such as:
+
+https://app.yourplatform.com/a/8f72k
+
+The route identifies the application.
+
+The runtime loads the corresponding application configuration and
+renders it.
+
+No GitHub, Vercel, DNS, or custom server setup should be required for
+the normal user.
+
+======================================================================
+20. CUSTOM DOMAINS
+======================================================================
+
+Do NOT implement custom domains in MVP.
+
+Later, users could connect:
+
+hr.company.com
+
+through a CNAME or equivalent mechanism.
+
+For MVP:
+
+Every application gets a platform-hosted URL.
+
+Example:
+
+https://app.yourplatform.com/a/8f72k
+
+This keeps deployment simple.
+
+======================================================================
+21. AUTHENTICATION
+======================================================================
+
+There are two separate authentication layers.
+
+A. Platform authentication
+
+Used by the application creator.
+
+Possible options:
+
+-   Google OAuth
+-   Email/password
+-   GitHub OAuth
+
+MVP can use one simple provider.
+
+B. Generated application authentication
+
+Used by users of the generated application.
+
+The platform should support:
+
+-   email/password
+-   session management
+-   application-specific roles
+-   permissions
+
+A user can belong to one or more generated applications.
+
+Conceptual identity:
+
+User Application Membership Role Permissions
+
+Example:
+
+Aryan Application: Leave Management Role: Employee
+
+Rahul Application: Leave Management Role: Manager
+
+======================================================================
+22. MULTI-TENANCY
+======================================================================
+
+This is one of the most important backend concepts.
+
+Applications must be isolated.
+
+Example:
+
+Application A: application_id = 101
+
+Application B: application_id = 102
+
+All generated data must be associated with the correct application.
+
+Example:
+
+leave_requests: - id - application_id - employee_id - start_date -
+end_date - status
+
+Every database access must enforce application ownership/tenant
+boundaries.
+
+Do not rely only on frontend filtering.
+
+Authorization must be enforced server-side.
+
+If using Postgres/Supabase, investigate Row Level Security.
+
+======================================================================
+23. RECOMMENDED MVP TECHNICAL ARCHITECTURE
+======================================================================
+
+Frontend: - Next.js - React - TypeScript - Tailwind CSS - shadcn/ui -
+modern component architecture
+
+Backend: - FastAPI - Python
+
+Database: - PostgreSQL - Supabase can be used for managed
+Postgres/auth/storage if appropriate
+
+AI: - One cost-effective LLM provider - Prefer structured output / JSON
+schema - Avoid unnecessary multi-agent complexity
+
+Workflow engine: - Build a lightweight deterministic workflow engine -
+Represent workflows as validated nodes + edges - Execute them
+server-side
+
+Optional: - LangGraph can be used for the AI planning/orchestration
+layer if it provides clear value. - Do not use LangGraph just to make
+the architecture look more advanced.
+
+Deployment: - Frontend: Vercel or equivalent - Backend:
+Railway/Render/Fly.io or equivalent - Database: Supabase/Postgres -
+Storage: Supabase Storage or equivalent
+
+The architecture should remain inexpensive enough for a student project.
+
+======================================================================
+24. AI ARCHITECTURE
+======================================================================
+
+Do not start with 15 agents.
+
+MVP can have:
+
+1.  Requirement Planner
+2.  Application Planner
+3.  Workflow Planner
+4.  Optional AI Workflow Action
+
+Potential flow:
+
+User Prompt -> Requirement Planner -> Application Specification ->
+Workflow Specification -> Validator -> Runtime
+
+The planning stages may be implemented as separate modules/functions
+initially rather than independent autonomous agents.
+
+Only introduce multiple agents where the separation genuinely improves
+reliability.
+
+======================================================================
+25. NATURAL LANGUAGE EDITING
+======================================================================
+
+This should be a major UX feature.
+
+After an application exists, user can say:
+
+“Add a manager role.”
+
+“Add a leave balance field.”
+
+“Employees should not be able to cancel approved leave.”
+
+“Add email notification when leave is approved.”
+
+“Managers should see only employees in their department.”
+
+The system should translate the request into changes to the application
+specification/workflow.
+
+Important: Changes must be validated and shown to the user before
+destructive changes are applied.
+
+Potential UX:
+
+User: “Add a second approval for leave longer than 7 days.”
+
+AI: “I’ll modify Leave Approval:
+
+Current: Employee -> Manager Approval -> Complete
+
+New: Employee -> Manager Approval -> If duration > 7 days -> HR Approval
+-> Complete
+
+Apply change?”
+
+[Apply] [Cancel]
+
+======================================================================
+26. AI SAFETY / RELIABILITY
+======================================================================
+
+The LLM should never be trusted as the source of truth for security.
+
+Never allow:
+
+-   arbitrary SQL from the model
+-   arbitrary server-side code execution
+-   unrestricted shell execution
+-   arbitrary API calls
+-   unrestricted credential access
+
+Use allowlisted actions.
+
+For example:
+
+ALLOWED ACTION TYPES:
+
+database.create database.update database.query notification.in_app
+notification.email workflow.approval workflow.condition ai.classify
+ai.extract webhook.call
+
+Each action should have a defined input/output schema.
+
+======================================================================
+27. WHAT NOT TO BUILD
+======================================================================
+
+Avoid these in MVP:
+
+-   arbitrary React code generation
+-   arbitrary backend code generation
+-   custom domain provisioning
+-   dozens of integrations
+-   mobile app generation
+-   full ERP functionality
+-   full CRM functionality
+-   marketplace
+-   enterprise billing
+-   complex RBAC editor
+-   distributed workflow infrastructure
+-   Kubernetes
+-   custom deployment per application
+-   self-hosting
+-   hundreds of templates
+-   complex collaboration
+-   advanced analytics
+-   autonomous agents that can execute unrestricted actions
+
+The goal is a sharp, functioning product.
+
+======================================================================
+28. MVP DEFINITION
+======================================================================
+
+The MVP is successful if a new user can:
+
+1.  Sign up
+2.  Create an application
+3.  Describe it in natural language
+4.  Receive an application/workflow plan
+5.  Approve the plan
+6.  Generate the application
+7.  See the live application preview
+8.  Create users/roles
+9.  Use the generated application
+10. Execute at least one workflow
+11. View execution logs
+12. Modify the workflow
+13. Test the modified workflow
+14. Publish it
+15. Share the generated URL with another user
+16. The second user can actually use the application
+
+That is the end-to-end demo.
+
+======================================================================
+29. SUGGESTED MVP PRIMITIVES
+======================================================================
+
+Start with only:
+
+UI: - Form - Table - Dashboard - Detail - Navigation
+
+Data: - Entity - Field - Relationship - CRUD
+
+Auth: - User - Role - Permission
+
+Workflow: - Trigger - Database Action - Condition - Approval -
+Notification - AI Action
+
+Integration: - In-app notification - Email - Webhook
+
+This is enough to build many useful internal applications.
+
+======================================================================
+30. FIRST 3 DEMO APPLICATIONS
+======================================================================
+
+The platform should be tested against at least three different
+application patterns.
+
+Demo 1: Employee Leave Management
+
+Demonstrates: - auth - roles - forms - database - approval -
+notification
+
+Demo 2: Customer Complaint Management
+
+Demonstrates: - AI classification - routing - conditions - roles -
+notifications
+
+Demo 3: Expense Approval
+
+Demonstrates: - numeric conditions - multiple approval levels - business
+rules - notifications
+
+If the same underlying runtime can generate all three, the architecture
+is working.
+
+======================================================================
+31. POTENTIAL FUTURE APPLICATIONS
+======================================================================
+
+After MVP:
+
+-   Lead management
+-   Recruitment pipeline
+-   Appointment system
+-   Inventory requests
+-   Purchase orders
+-   Vendor onboarding
+-   Employee onboarding
+-   Project management
+-   Client onboarding
+-   Service request management
+-   Simple helpdesk
+-   Invoice approval
+-   Document approval
+
+======================================================================
+32. BUSINESS MODEL
+======================================================================
+
+The product should initially be inexpensive.
+
+The target is not enterprise SaaS immediately.
+
+Potential model:
+
+Free: - limited applications - limited workflow executions
+
+Paid credits: - small number of workflow executions for a low price
+
+Example: ₹49 / ₹99 credit packs
+
+The exact pricing should be validated with real users.
+
+The goal is to make the product cheap enough for an individual/small
+business to try while covering AI/API costs.
+
+The user should pay for VALUE/EXECUTION, not for access to “an LLM.”
+
+======================================================================
+33. WHY SOMEONE WOULD USE THIS INSTEAD OF A GENERIC AI APP BUILDER
+======================================================================
+
+The product should differentiate through:
+
+1.  Application + workflow together
+2.  Structured application model instead of arbitrary generated code
+3.  Built-in workflow execution
+4.  Business rules
+5.  Approvals
+6.  Roles/permissions
+7.  Workflow simulation
+8.  Execution logs
+9.  Natural-language workflow modification
+10. Hosted runtime with immediate shareable URL
+
+The important distinction:
+
+Generic AI app builder: “Generate my application.”
+
+This product: “Understand my business process and give me a working
+system that executes it.”
+
+======================================================================
+34. THE MOST IMPORTANT DIFFERENTIATOR
+======================================================================
+
+The differentiator is NOT:
+
+“We use AI.”
+
+It is NOT:
+
+“We use multiple agents.”
+
+It is NOT:
+
+“We generate code.”
+
+It is:
+
+“Natural language becomes a validated, executable application and
+workflow specification.”
+
+The application is not just a collection of generated screens.
+
+It has:
+
+-   state
+-   data
+-   users
+-   permissions
+-   business rules
+-   workflows
+-   execution
+-   history
+
+======================================================================
+35. PRODUCT EXPERIENCE IN ONE EXAMPLE
+======================================================================
+
+USER:
+
+“I run a small design agency. Clients submit project requests. I want to
+store client information, turn requests into projects, assign tasks to
+designers, track status, and send the client a notification when the
+project is completed.”
+
+PLATFORM:
+
+Understood.
+
+Users: - Admin - Designer - Client
+
+Pages: - Dashboard - Clients - Projects - Tasks - Client Portal
+
+Data: - Clients - Projects - Tasks - Users - Notifications
+
+Workflow: Client Request -> Create Project -> Create Tasks -> Assign
+Designer -> Track Project -> Project Completed -> Notify Client
+
+[Build Application]
+
+After build:
+
+Application preview appears.
+
+User can create a client.
+
+Client submits a request.
+
+Workflow executes.
+
+Admin sees project.
+
+Designer sees assigned task.
+
+When completed, notification is generated.
+
+User clicks Publish.
+
+URL: https://app.yourplatform.com/a/design-agency-xyz
+
+The client can access the system.
+
+No GitHub. No manual deployment. No DNS setup. No server configuration
+for the customer.
+
+======================================================================
+36. PRODUCT PHILOSOPHY
+======================================================================
+
+Build less, but make it work extremely well.
+
+The platform should feel:
+
+-   fast
+-   clean
+-   trustworthy
+-   understandable
+-   visual
+-   AI-native
+-   no-code
+-   predictable
+
+The user should never need to understand:
+
+-   database schema syntax
+-   API implementation
+-   server deployment
+-   workflow engine internals
+-   authentication infrastructure
+
+But the system underneath should be engineered properly.
+
+======================================================================
+37. IMPLEMENTATION PHASES
+======================================================================
+
+PHASE 1 — FOUNDATION
+
+Build: - Next.js frontend - FastAPI backend - PostgreSQL - platform
+authentication - application model - basic multi-tenancy
+
+Goal: User can create and manage applications.
+
+PHASE 2 — RUNTIME
+
+Build: - page renderer - form renderer - table renderer - dashboard
+renderer - entity/data layer - application routes
+
+Goal: A manually configured application can run.
+
+PHASE 3 — WORKFLOW ENGINE
+
+Build: - trigger - actions - conditions - branching - approval -
+notifications - execution logs
+
+Goal: A manually configured workflow can execute.
+
+PHASE 4 — AI GENERATION
+
+Build: - requirement planner - application specification generation -
+workflow specification generation - validation - plan confirmation UI
+
+Goal: Natural language can generate a valid application configuration.
+
+PHASE 5 — LIVE PREVIEW + EDITING
+
+Build: - preview - workflow visualization - test execution - natural
+language modifications
+
+Goal: User can iteratively improve the generated system.
+
+PHASE 6 — PUBLISH
+
+Build: - published application status - public application routing -
+application-level auth - shareable URL
+
+Goal: A generated application can be shared and used by real users.
+
+======================================================================
+38. DEVELOPMENT ORDER
+======================================================================
+
+Do NOT start by building the AI.
+
+First prove the runtime.
+
+Recommended order:
+
+1.  Manually define an application JSON/configuration.
+2.  Render it.
+3.  Connect it to database.
+4.  Implement auth.
+5.  Implement roles.
+6.  Implement workflow engine.
+7.  Execute workflows.
+8.  Add logs.
+9.  Build visual workflow display.
+10. Only then add LLM generation.
+
+Reason:
+
+If the runtime does not work, AI-generated configuration will not save
+the project.
+
+The AI should sit on top of a functioning deterministic system.
+
+======================================================================
+39. FIRST END-TO-END TARGET
+======================================================================
+
+The first complete milestone should be:
+
+“I can manually configure an employee leave management application, run
+it, submit a leave request as an employee, approve it as a manager,
+update the database, and notify the employee.”
+
+Then:
+
+“I can describe that application to the AI and the AI generates the same
+configuration.”
+
+Then:
+
+“I can publish it and give another person a URL.”
+
+This is the core proof.
+
+======================================================================
+40. CLAUDE CODE DEVELOPMENT INSTRUCTIONS
+======================================================================
+
+When implementing this project:
+
+1.  Do not over-engineer.
+2.  Prefer simple, explicit architecture.
+3.  Keep the application specification strongly typed.
+4.  Validate all LLM output.
+5.  Never trust raw LLM output.
+6.  Keep workflow execution deterministic.
+7.  Keep tenant isolation server-side.
+8.  Separate platform users from generated-app users.
+9.  Make every workflow execution observable.
+10. Write tests for workflow execution.
+11. Keep AI provider abstraction replaceable.
+12. Keep deployment inexpensive.
+13. Avoid unnecessary dependencies.
+14. Build incrementally.
+15. Keep the generated application runtime independent from the AI
+    planner.
+
+When a feature can be implemented deterministically, do not use an LLM
+for it.
+
+======================================================================
+41. SUCCESS CRITERIA
+======================================================================
+
+The project should be considered successful when someone who has never
+seen the code can:
+
+-   open the website
+-   sign up
+-   describe an application
+-   watch the system generate the plan
+-   approve it
+-   see a working application
+-   interact with the generated application
+-   trigger a workflow
+-   see the workflow execution
+-   modify the workflow using natural language
+-   test it
+-   publish it
+-   send the resulting URL to another person
+-   have that person log in and use the application
+
+If this entire flow works reliably, the project is impressive enough to
+demonstrate as a serious final-year engineering project and potentially
+as an early-stage product.
+
+======================================================================
+42. FINAL PRODUCT DEFINITION
+======================================================================
+
+Working product definition:
+
+An AI-native no-code platform for creating small business and internal
+applications from natural-language requirements.
+
+Core promise:
+
+“Describe your process. Build the application. Run the workflow. Share
+the system.”
+
+Core architecture:
+
+Natural Language -> AI Planner -> Application Specification + Workflow
+Specification -> Validation -> Runtime -> Database + Auth + Workflow
+Engine -> Live Application -> Execution Logs -> Publishable URL
+
+Core innovation:
+
+A controlled, configuration-driven application runtime combined with
+AI-generated executable workflows.
+
+The system should prioritize a small number of powerful primitives over
+unlimited code generation.
+
+The ultimate goal is NOT to build a competitor to Lovable.
+
+The goal is to build a small, technically rigorous, useful product that
+makes it possible for a non-technical user to describe a repetitive
+business process and receive a working application that actually
+executes that process.
+
+======================================================================
+END OF DOCUMENT
+======================================================================
