@@ -34,6 +34,7 @@ from app.models import (
     StepStatus,
     WorkflowRun,
     WorkflowRunStep,
+    as_utc,
     utcnow,
 )
 from app.specs.catalog import MAX_WORKFLOW_STEPS, StepType
@@ -386,7 +387,7 @@ def _log_step(
             existing.status = outcome.status
             existing.message = outcome.message
             existing.detail = outcome.detail
-            waited = (utcnow() - existing.started_at).total_seconds()
+            waited = (utcnow() - as_utc(existing.started_at)).total_seconds()
             existing.duration_ms = int(waited * 1000)
             session.flush()
             return existing
@@ -444,7 +445,9 @@ def run_summary(run: WorkflowRun, steps: list[WorkflowRunStep] | None = None) ->
     entries = steps if steps is not None else list(run.steps)
     duration = None
     if run.finished_at:
-        duration = round((run.finished_at - run.created_at).total_seconds(), 2)
+        duration = round(
+            (as_utc(run.finished_at) - as_utc(run.created_at)).total_seconds(), 2
+        )
 
     return {
         "id": run.id,

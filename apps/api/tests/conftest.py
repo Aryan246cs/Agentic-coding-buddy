@@ -14,6 +14,7 @@ import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.models import (
     AppUser,
@@ -38,9 +39,35 @@ def demo_specs() -> dict[str, AppSpec]:
     return {path.stem: load_demo(path.stem) for path in sorted(DEMOS.glob("*.json"))}
 
 
+@pytest.fixture(autouse=True)
+def never_call_a_real_model():
+    """No test may reach a live AI provider.
+
+    Seeding the provider cache catches every call site at once, including the
+    routers that import `get_provider` by name at module load. A test suite
+    that quietly spends money — or fails when the network is down — is worse
+    than no test suite.
+    """
+    from app.ai import provider as provider_module
+    from app.config import get_settings
+
+    previous = (provider_module._cache.instance, provider_module._cache.key)
+    provider_module._cache.instance = provider_module.EchoProvider()
+    provider_module._cache.key = get_settings().resolved_provider
+    yield
+    provider_module._cache.instance, provider_module._cache.key = previous
+
+
 @pytest.fixture
 def engine() -> Engine:
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    # StaticPool keeps every connection pointed at the same in-memory database.
+    # Without it each connection gets its own, and the test client — which runs
+    # the app on another thread — would find no tables.
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
     @event.listens_for(engine, "connect")
     def _fk_on(dbapi_connection, _record):

@@ -49,6 +49,17 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def as_utc(moment: datetime) -> datetime:
+    """Make a stored timestamp safe to compare against `utcnow()`.
+
+    SQLite has no timezone type, so a datetime read back from it is naive even
+    though it was written as UTC. Subtracting that from an aware datetime
+    raises, which is a crash in the middle of an approval — so every timestamp
+    read from the database goes through here first.
+    """
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
+
+
 class Base(DeclarativeBase):
     pass
 
