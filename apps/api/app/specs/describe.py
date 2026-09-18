@@ -107,13 +107,9 @@ def describe_step(spec: AppSpec, workflow: WorkflowSpec, step: Step) -> dict[str
             role = spec.role(step.role)
             sentence = f"Wait for the {(role.label if role else step.role).lower()} to approve or reject it"
         case StepType.NOTIFY_IN_APP:
-            role = spec.role(step.to)
-            who = role.label.lower() if role else _plain(step.to)
-            sentence = f"Send {who} a message in the app"
+            sentence = f"Send {_who(spec, step.to)} a message in the app"
         case StepType.NOTIFY_EMAIL:
-            role = spec.role(step.to)
-            who = role.label.lower() if role else _plain(step.to)
-            sentence = f"Email {who}"
+            sentence = f"Email {_who(spec, step.to)}"
         case StepType.AI_CLASSIFY:
             sentence = (
                 f"Read it and decide if it is {_join_words(list(step.categories))}"
@@ -140,6 +136,14 @@ def describe_step(spec: AppSpec, workflow: WorkflowSpec, step: Step) -> dict[str
         "sentence": sentence,
         "branches": branches,
     }
+
+
+def _who(spec: AppSpec, target: str) -> str:
+    """A notification's recipient, as a noun phrase that reads naturally."""
+    role = spec.role(target)
+    if role:
+        return f"the {role.label.lower()}"
+    return _plain(target)
 
 
 def _next_label(workflow: WorkflowSpec, step: Step) -> str:

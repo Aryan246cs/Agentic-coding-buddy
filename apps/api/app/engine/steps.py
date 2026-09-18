@@ -180,6 +180,26 @@ def describe_comparison(left: Any, operator: Operator, right: Any, result: bool)
 # --------------------------------------------------------------------------
 
 
+def _describe_recipient(env: RunEnv, target: str, context: dict[str, Any]) -> str:
+    """Who a notification is for, in words.
+
+    A test log that says `{{ trigger.user.id }}` tells the reader nothing, and
+    the test log is the thing that has to convince them the app works.
+    """
+    if not expressions.is_expression(target):
+        role = env.spec.role(target)
+        return f"the {role.label.lower()}" if role else target
+
+    if "trigger.user" in target:
+        name = context.get("trigger", {}).get("user", {}).get("name")
+        return name or "the person who submitted it"
+
+    try:
+        return str(expressions.evaluate(target, context))
+    except expressions.ExpressionError:
+        return "the person it concerns"
+
+
 def resolve_recipients(env: RunEnv, target: str, context: dict[str, Any]) -> list[AppUser]:
     """Who a notification goes to.
 
@@ -287,10 +307,11 @@ def _handle_notify_in_app(env: RunEnv, step, context: dict[str, Any]) -> StepOut
     body = env.resolve(step.body, context)
 
     if env.is_test:
-        env.captured_notifications.append({"to": step.to, "title": title, "body": body})
+        who = _describe_recipient(env, step.to, context)
+        env.captured_notifications.append({"to": who, "title": title, "body": body})
         return StepOutcome(
-            message=f"Would notify {step.to}: {title}",
-            detail={"to": step.to, "title": title, "body": body, "simulated": True},
+            message=f"Would notify {who}: {title}",
+            detail={"to": who, "title": title, "body": body, "simulated": True},
         )
 
     recipients = resolve_recipients(env, step.to, context)
@@ -337,12 +358,11 @@ def _handle_notify_email(env: RunEnv, step, context: dict[str, Any]) -> StepOutc
         addresses = [u.email for u in resolve_recipients(env, step.to, context)]
 
     if env.is_test:
-        env.captured_emails.append(
-            {"to": addresses or [step.to], "subject": subject, "body": body}
-        )
+        who = addresses or [_describe_recipient(env, step.to, context)]
+        env.captured_emails.append({"to": who, "subject": subject, "body": body})
         return StepOutcome(
-            message=f"Would email {', '.join(addresses) or step.to}: {subject}",
-            detail={"to": addresses or [step.to], "subject": subject, "simulated": True},
+            message=f"Would email {', '.join(who)}: {subject}",
+            detail={"to": who, "subject": subject, "body": body, "simulated": True},
         )
 
     if not addresses:
