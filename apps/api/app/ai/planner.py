@@ -46,6 +46,8 @@ class PlanResult:
     cost_micros: int = 0
     #: True when the offline planner answered, so the UI can say so.
     offline: bool = False
+    #: Set when we fell back to a template, phrased for the user.
+    fallback_reason: str | None = None
 
 
 @dataclass
@@ -125,10 +127,21 @@ def _attempt(
     last_report: ValidationReport | None = None
     last_problem = ""
 
+    unreachable: AIError | None = None
+
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        completion = provider.complete(
-            system=system, prompt=messages, schema=schema, max_tokens=12000
-        )
+        try:
+            completion = provider.complete(
+                system=system, prompt=messages, schema=schema, max_tokens=12000
+            )
+        except AIError as exc:
+            # The provider is down, rate-limiting us, or the key is wrong.
+            # Retrying the same call will not help, so stop asking.
+            unreachable = exc
+            last_problem = str(exc)
+            logger.warning("planner could not reach the provider: %s", exc)
+            break
+
         totals["input"] += completion.input_tokens
         totals["output"] += completion.output_tokens
         totals["cost"] += completion.cost_micros
@@ -168,16 +181,29 @@ def _attempt(
         messages = f"{prompt}\n\n{prompts.repair_prompt(last_problem)}"
 
     if source_description:
-        # Rather than hand the user nothing, fall back to the closest template
-        # and tell them that is what happened.
-        logger.warning("planner gave up after %s attempts; using a template", MAX_ATTEMPTS)
+        # Rather than hand the user a dead end, fall back to the closest
+        # template and say so. Someone describing their leave process should
+        # get something they can edit, not an apology about our AI provider.
+        logger.warning("planner gave up; using a template instead")
         fallback = _offline_plan(source_description)
         fallback.attempts = MAX_ATTEMPTS
+        fallback.fallback_reason = (
+            "We could not reach the AI just now, so we started you from the "
+            "closest ready-made app."
+            if unreachable
+            else "The plan we generated did not hold together, so we started "
+            "you from the closest ready-made app."
+        )
         return fallback
 
+    # A revision has no template to fall back to — changing an existing app
+    # means changing that app, not replacing it with a stock one.
+    if unreachable:
+        raise PlanningError(f"The AI could not be reached: {unreachable}")
+
     raise PlanningError(
-        "The plan could not be made valid after two attempts. "
-        f"Last problem:\n{last_problem}",
+        "The change could not be applied cleanly. "
+        f"What went wrong:\n{last_problem}",
         last_report,
     )
 

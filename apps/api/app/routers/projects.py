@@ -200,6 +200,7 @@ def plan_an_app(body: PlanRequest, session: SessionDep, user: CurrentUser) -> di
         "plan": describe_plan(result.spec),
         "warnings": result.report.to_dict()["warnings"],
         "offline": result.offline,
+        "fallback_reason": result.fallback_reason,
         "attempts": result.attempts,
     }
 

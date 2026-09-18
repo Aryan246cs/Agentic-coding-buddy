@@ -105,9 +105,10 @@ export default function NewApp() {
         <div className="mt-10">
           {result.offline && (
             <div className="mb-6">
-              <Alert tone="warn" title="Built from a template">
-                No AI key is configured, so we started you from the closest
-                ready-made app. You can change anything about it.
+              <Alert tone="warn" title="Started you from a ready-made app">
+                {result.fallback_reason ||
+                  'No AI is set up here, so we started you from the closest ready-made app.'}{' '}
+                You can change anything about it.
               </Alert>
             </div>
           )}
