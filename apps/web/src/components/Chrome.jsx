@@ -8,20 +8,21 @@ export default function Chrome({ children, wide = false }) {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <Link to="/dashboard" className="font-semibold tracking-tight text-slate-900">
+    <div className="app-shell min-h-screen">
+      <header className="border-b border-white/10 bg-[#0b0d13]/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <Link to="/dashboard" className="flex items-center gap-2 font-semibold tracking-tight text-white">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-400 to-cyan-300 text-sm text-slate-950">S</span>
             Sequence
           </Link>
           <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-slate-600 sm:inline">{user?.name}</span>
+            <span className="hidden text-sm text-slate-400 sm:inline">{user?.name}</span>
             <button
               onClick={() => {
                 signOut();
                 navigate('/');
               }}
-              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+              className="text-sm font-medium text-slate-400 transition hover:text-white"
             >
               Sign out
             </button>
@@ -29,7 +30,7 @@ export default function Chrome({ children, wide = false }) {
         </div>
       </header>
 
-      <main className={`mx-auto px-6 py-8 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
+      <main className={`relative mx-auto px-6 py-10 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
         {children}
       </main>
     </div>

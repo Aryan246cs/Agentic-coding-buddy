@@ -37,11 +37,11 @@ const EXAMPLES = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <span className="text-lg font-semibold tracking-tight text-slate-900">Sequence</span>
+    <div className="min-h-screen overflow-hidden bg-[#08090d] text-white">
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+        <span className="flex items-center gap-2 text-lg font-semibold tracking-tight"><span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-400 to-cyan-300 text-sm text-slate-950">S</span>Sequence</span>
         <nav className="flex items-center gap-3">
-          <Link to="/signin" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <Link to="/signin" className="text-sm font-medium text-slate-400 hover:text-white">
             Sign in
           </Link>
           <LinkButton to="/signup" size="sm">
@@ -51,65 +51,65 @@ export default function Landing() {
       </header>
 
       <main>
-        <section className="mx-auto max-w-3xl px-6 pb-20 pt-16 text-center sm:pt-24">
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-            Describe how your work happens.
-            <br />
-            <span className="text-slate-500">Get a working system with a link.</span>
+        <section className="relative mx-auto max-w-5xl px-6 pb-24 pt-20 text-center sm:pt-28">
+          <div className="absolute left-1/2 top-0 -z-0 h-80 w-80 -translate-x-1/2 rounded-full bg-violet-500/20 blur-[100px]" />
+          <p className="relative mx-auto inline-flex rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-xs font-medium tracking-wide text-cyan-200">ONE HOME FOR YOUR PRESENCE + OPERATIONS</p>
+          <h1 className="relative mt-6 text-5xl font-semibold leading-[.98] tracking-tight sm:text-7xl">
+            Make the work feel<br />
+            <span className="bg-gradient-to-r from-violet-300 via-white to-cyan-200 bg-clip-text text-transparent">effortlessly organised.</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
-            If your team runs on WhatsApp messages and a spreadsheet, this turns that
-            into something with a form, a queue, and a record of who approved what.
+          <p className="relative mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-slate-400">
+            Create a beautiful website for the world, then give your team a calm, capable system for the work behind it.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <LinkButton to="/signup" size="lg">
               Build one free
             </LinkButton>
-            <span className="text-sm text-slate-500">Takes about two minutes.</span>
+            <span className="text-sm text-slate-400">Start with a proven template.</span>
           </div>
         </section>
 
-        <section className="border-y border-slate-200 bg-slate-50 py-16">
-          <div className="mx-auto grid max-w-5xl gap-8 px-6 sm:grid-cols-3">
+        <section className="border-y border-white/10 bg-white/[.025] py-16">
+          <div className="mx-auto grid max-w-6xl gap-5 px-6 sm:grid-cols-3">
             {STEPS.map((step, index) => (
-              <div key={step.title}>
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-sm font-medium text-white">
+              <div key={step.title} className="rounded-2xl border border-white/[.08] bg-[#10121a] p-6">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-violet-400/15 text-sm font-medium text-violet-200">
                   {index + 1}
                 </span>
-                <h3 className="mt-4 font-semibold text-slate-900">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{step.body}</p>
+                <h3 className="mt-4 font-semibold text-white">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">{step.body}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-6 py-16">
-          <h2 className="text-center text-2xl font-semibold tracking-tight text-slate-900">
-            What people build
+        <section className="mx-auto max-w-6xl px-6 py-20">
+          <h2 className="text-center text-3xl font-semibold tracking-tight text-white">
+            Built around work that matters
           </h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {EXAMPLES.map((example) => (
               <div
                 key={example.name}
-                className="rounded-xl border border-slate-200 bg-white p-5"
+                className="rounded-2xl border border-white/[.10] bg-white/[.035] p-6 transition hover:-translate-y-1 hover:border-cyan-300/30"
               >
-                <h3 className="font-medium text-slate-900">{example.name}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{example.body}</p>
+                <h3 className="font-medium text-white">{example.name}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">{example.body}</p>
               </div>
             ))}
           </div>
-          <p className="mt-8 text-center text-sm text-slate-500">
+          <p className="mt-8 text-center text-sm text-slate-400">
             Anything shaped like: someone submits it, someone approves it, everyone
             needs to know.
           </p>
         </section>
 
-        <section className="border-t border-slate-200 bg-slate-50 py-16">
+        <section className="border-t border-white/10 bg-gradient-to-b from-violet-500/10 to-transparent py-20">
           <div className="mx-auto max-w-2xl px-6 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+            <h2 className="text-3xl font-semibold tracking-tight text-white">
               Start free
             </h2>
-            <p className="mt-3 text-slate-600">
+            <p className="mt-3 text-slate-400">
               One app and one website, free forever. Pay only when your team actually
               uses it.
             </p>
@@ -122,7 +122,7 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="mx-auto max-w-5xl px-6 py-8 text-sm text-slate-500">
+      <footer className="mx-auto max-w-6xl px-6 py-8 text-sm text-slate-500">
         <p>Sequence — built for small teams.</p>
       </footer>
     </div>

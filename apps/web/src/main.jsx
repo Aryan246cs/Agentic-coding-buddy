@@ -10,6 +10,7 @@ import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
 import Dashboard from './pages/Dashboard';
 import NewApp from './pages/NewApp';
+import NewSite from './pages/NewSite';
 import Builder from './pages/Builder';
 import PublishedApp from './pages/runtime/PublishedApp';
 import PublishedSite from './pages/PublishedSite';
@@ -44,6 +45,10 @@ function App() {
             <NewApp />
           </RequireAuth>
         }
+      />
+      <Route
+        path="/new/site"
+        element={<RequireAuth><NewSite /></RequireAuth>}
       />
       <Route
         path="/projects/:projectId/*"

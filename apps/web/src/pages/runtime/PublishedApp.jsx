@@ -65,7 +65,7 @@ export default function PublishedApp() {
 
   if (fatal) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="app-shell flex min-h-screen items-center justify-center px-4">
         <Card className="max-w-md p-8 text-center">
           <p className="text-lg font-medium text-slate-900">Nothing here</p>
           <p className="mt-2 text-sm text-slate-600">{fatal}</p>
@@ -129,7 +129,7 @@ function SignInToApp({ slug, info, inviteToken, onSignedIn }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+    <div className="app-shell flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <Card className="p-6">
           <h1 className="text-xl font-semibold text-slate-900">{info.name}</h1>
@@ -195,7 +195,7 @@ function AppShell({ slug, session, screenKey, onNavigate, onSignOut }) {
   }, [refreshBell, version]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="app-shell min-h-screen">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3">

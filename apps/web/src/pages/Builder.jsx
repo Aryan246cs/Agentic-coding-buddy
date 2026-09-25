@@ -6,6 +6,7 @@ import Chrome from '../components/Chrome';
 import PlanView from '../components/PlanView';
 import RunLog from '../components/RunLog';
 import FieldInput, { initialValues } from '../components/FieldInput';
+import SiteBuilder from './SiteBuilder';
 import {
   Alert,
   Badge,
@@ -87,6 +88,10 @@ export default function Builder() {
   }
 
   const publicUrl = `${window.location.origin}${project.public_path}`;
+
+  if (project.kind === 'site') {
+    return <SiteBuilder project={project} onReload={load} />;
+  }
 
   return (
     <Chrome wide>

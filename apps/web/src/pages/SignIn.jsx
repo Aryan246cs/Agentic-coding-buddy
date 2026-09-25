@@ -37,17 +37,17 @@ export default function SignIn({ mode = 'login' }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+    <div className="app-shell flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <Link to="/" className="mb-8 block text-center text-lg font-semibold text-slate-900">
-          Sequence
+        <Link to="/" className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold text-white">
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-400 to-cyan-300 text-sm text-slate-950">S</span>Sequence
         </Link>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-xl font-semibold text-slate-900">
+        <div className="rounded-2xl border border-white/10 bg-white/[.05] p-6 shadow-2xl shadow-black/30 backdrop-blur-sm">
+          <h1 className="text-xl font-semibold text-white">
             {isSignup ? 'Create your account' : 'Welcome back'}
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-slate-400">
             {isSignup
               ? 'Free to start. No card needed.'
               : 'Sign in to your apps and sites.'}
@@ -99,11 +99,11 @@ export default function SignIn({ mode = 'login' }) {
           </form>
         </div>
 
-        <p className="mt-4 text-center text-sm text-slate-600">
+        <p className="mt-4 text-center text-sm text-slate-400">
           {isSignup ? 'Already have an account? ' : "Don't have an account? "}
           <Link
             to={isSignup ? '/signin' : '/signup'}
-            className="font-medium text-slate-900 underline underline-offset-2"
+            className="font-medium text-cyan-200 underline underline-offset-2"
           >
             {isSignup ? 'Sign in' : 'Sign up'}
           </Link>
