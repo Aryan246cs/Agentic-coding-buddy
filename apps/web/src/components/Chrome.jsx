@@ -11,9 +11,9 @@ export default function Chrome({ children, wide = false }) {
     <div className="app-shell min-h-screen">
       <header className="border-b border-white/10 bg-[#0b0d13]/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/dashboard" className="flex items-center gap-2 font-semibold tracking-tight text-white">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-400 to-cyan-300 text-sm text-slate-950">S</span>
-            Sequence
+          <Link to="/dashboard" aria-label="Sequence home" className="flex items-center gap-2.5 font-semibold tracking-tight text-white">
+            <img src="/brand-mark.png" alt="" className="h-10 w-10 object-contain" />
+            <span className="text-base">Sequence</span>
           </Link>
           <div className="flex items-center gap-4">
             <span className="hidden text-sm text-slate-400 sm:inline">{user?.name}</span>

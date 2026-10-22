@@ -64,8 +64,17 @@ export default function Dashboard() {
   if (projects === null) return <Loading />;
 
   return (
-    <Chrome>
+      <Chrome wide>
       <PageHeader title="Your workspace" subtitle="Websites for the world. Workflows for the work behind it." actions={<div className="flex gap-2"><LinkButton to="/new/site" variant="secondary">New website</LinkButton><LinkButton to="/new">New workflow</LinkButton></div>} />
+
+      <div className="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          ['Projects', projects.length, 'All your work'],
+          ['Websites', projects.filter((item) => item.kind === 'site').length, 'Public presence'],
+          ['Workflows', projects.filter((item) => item.kind !== 'site').length, 'Team operations'],
+          ['Published', projects.filter((item) => item.is_published).length, 'Live right now'],
+        ].map(([label, value, note]) => <div key={label} className="rounded-2xl border border-white/[.08] bg-white/[.025] px-4 py-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight text-white">{value}</p><p className="mt-1 text-xs text-slate-500">{note}</p></div>)}
+      </div>
 
       <div className="mb-8 grid gap-3 md:grid-cols-2">
         <Link to="/new/site" className="group rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-cyan-400/10 to-transparent p-5 transition hover:-translate-y-0.5 hover:border-cyan-300/45">

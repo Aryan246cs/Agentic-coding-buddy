@@ -39,8 +39,9 @@ export default function SignIn({ mode = 'login' }) {
   return (
     <div className="app-shell flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold text-white">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-400 to-cyan-300 text-sm text-slate-950">S</span>Sequence
+        <Link to="/" className="mb-8 flex items-center justify-center gap-2.5 text-lg font-semibold text-white">
+          <img src="/brand-mark.png" alt="" className="h-12 w-12 object-contain" />
+          <span>Sequence</span>
         </Link>
 
         <div className="rounded-2xl border border-white/10 bg-white/[.05] p-6 shadow-2xl shadow-black/30 backdrop-blur-sm">

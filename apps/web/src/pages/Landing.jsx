@@ -39,7 +39,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#08090d] text-white">
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <span className="flex items-center gap-2 text-lg font-semibold tracking-tight"><span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-400 to-cyan-300 text-sm text-slate-950">S</span>Sequence</span>
+        <span className="flex items-center gap-2.5 text-lg font-semibold tracking-tight"><img src="/brand-mark.png" alt="" className="h-11 w-11 object-contain" /><span>Sequence</span></span>
         <nav className="flex items-center gap-3">
           <Link to="/signin" className="text-sm font-medium text-slate-400 hover:text-white">
             Sign in

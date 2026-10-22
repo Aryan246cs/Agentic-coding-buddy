@@ -343,6 +343,7 @@ class SiteSpec(SpecModel):
     site_name: Label
     tagline: Label
     hero_body: str = Field(default="", max_length=600)
+    hero_eyebrow: str | None = Field(default=None, max_length=80)
     hero_image_query: str | None = Field(default=None, max_length=80)
     sections: list[SiteSection] = Field(default_factory=list, max_length=8)
     contact_email: str | None = None
@@ -350,3 +351,9 @@ class SiteSpec(SpecModel):
     location: str | None = Field(default=None, max_length=120)
     links: dict[Name, str] = Field(default_factory=dict)
     cta_label: Label | None = None
+    show_header: bool = True
+    show_footer: bool = True
+    show_contact: bool = True
+    show_cta: bool = True
+    footer_text: str | None = Field(default=None, max_length=120)
+    section_style: Literal["outlined", "soft", "minimal"] = "outlined"
