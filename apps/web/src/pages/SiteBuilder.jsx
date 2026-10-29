@@ -1,27 +1,51 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
 import { api } from '../lib/api';
 import Chrome from '../components/Chrome';
 import SiteCanvas from '../components/SiteCanvas';
+import CustomSiteStudio from './CustomSiteStudio';
 import { Alert, Button, Card, Input, PageHeader, Select, Textarea } from '../components/ui';
 
 const themes = [
   { key: 'slate', color: '#a78bfa' }, { key: 'ink', color: '#22d3ee' }, { key: 'forest', color: '#34d399' },
   { key: 'clay', color: '#fb923c' }, { key: 'indigo', color: '#818cf8' }, { key: 'sand', color: '#fbbf24' },
 ];
-const labels = { portfolio: 'Portfolio', freelancer: 'Freelancer', business: 'Local business', event: 'Event', personal: 'Personal' };
+const labels = {
+  portfolio: 'Portfolio', freelancer: 'Freelancer', business: 'Local business', event: 'Event', personal: 'Personal',
+  agency: 'Creative agency', restaurant: 'Restaurant & café', wellness: 'Wellness & spa', saas: 'Software product',
+  product: 'Product launch', course: 'Online course', newsletter: 'Newsletter', podcast: 'Podcast', wedding: 'Wedding & celebration',
+  nonprofit: 'Nonprofit & community', real_estate: 'Real estate', hospitality: 'Stay & hospitality', fitness: 'Fitness & coaching',
+  resume: 'Resume & profile', creator: 'Creator & artist',
+};
 export default function SiteBuilder({ project, onReload }) {
+  if (project.files) return <CustomSiteStudio key={`${project.id}-${project.updated_at}`} project={project} onReload={onReload} />;
+  return <TemplateSiteBuilder project={project} onReload={onReload} />;
+}
+
+function TemplateSiteBuilder({ project, onReload }) {
   const [spec, setSpec] = useState(project.spec);
   const [tab, setTab] = useState('content');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
+  const [draggedSection, setDraggedSection] = useState(null);
   useEffect(() => setSpec(project.spec), [project.spec]);
   const change = (key, value) => setSpec((old) => ({ ...old, [key]: value }));
   async function save() { setBusy(true); setError(null); try { await api.updateProject(project.id, { name: spec.site_name, spec }); setNotice('Draft saved. Your public site has not changed.'); onReload(); } catch (e) { setError(e.message); } finally { setBusy(false); } }
   async function publish() { setBusy(true); setError(null); try { await api.updateProject(project.id, { name: spec.site_name, spec }); await api.publish(project.id); setNotice('Published — your new site is live.'); onReload(); } catch (e) { setError(e.message); } finally { setBusy(false); } }
   async function unpublish() { setBusy(true); try { await api.unpublish(project.id); setNotice('Taken offline.'); onReload(); } catch (e) { setError(e.message); } finally { setBusy(false); } }
   function section(index, key, value) { setSpec((old) => ({ ...old, sections: old.sections.map((s, i) => i === index ? { ...s, [key]: value } : s) })); }
+  function moveSection(from, to) {
+    if (from == null || from === to) return;
+    setSpec((old) => {
+      const sections = [...old.sections];
+      const [item] = sections.splice(from, 1);
+      sections.splice(to, 0, item);
+      return { ...old, sections };
+    });
+    setDraggedSection(null);
+  }
   function addSection() { setSpec((old) => ({ ...old, sections: [...old.sections, { key: `section_${Date.now()}`, heading: 'A new section', body: 'Add a few words to tell your story.', items: [] }] })); }
   function removeSection(index) { setSpec((old) => ({ ...old, sections: old.sections.filter((_, i) => i !== index) })); }
   const publicUrl = `${window.location.origin}${project.public_path}`;
@@ -35,9 +59,24 @@ export default function SiteBuilder({ project, onReload }) {
         <div className="max-h-[72vh] space-y-4 overflow-y-auto p-3">
           {tab === 'content' && <>
             <div><p className="mb-3 text-xs font-semibold uppercase tracking-[.15em] text-violet-300">Hero</p><label className="block text-sm text-slate-300">Site name<Input className="mt-1.5" value={spec.site_name} onChange={(e) => change('site_name', e.target.value)} /></label><label className="mt-3 block text-sm text-slate-300">Eyebrow<Input className="mt-1.5" value={spec.hero_eyebrow || ''} onChange={(e) => change('hero_eyebrow', e.target.value)} placeholder="A short intro above your title" /></label><label className="mt-3 block text-sm text-slate-300">Headline<Input className="mt-1.5" value={spec.tagline} onChange={(e) => change('tagline', e.target.value)} /></label><label className="mt-3 block text-sm text-slate-300">Introduction<Textarea className="mt-1.5" rows={3} value={spec.hero_body || ''} onChange={(e) => change('hero_body', e.target.value)} /></label><label className="mt-3 block text-sm text-slate-300">Button label<Input className="mt-1.5" value={spec.cta_label || ''} onChange={(e) => change('cta_label', e.target.value)} /></label></div>
-            <div className="border-t border-white/10 pt-4"><div className="mb-3 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[.15em] text-violet-300">Page sections</p><span className="text-xs text-slate-500">{spec.sections?.length || 0} / 8</span></div>{(spec.sections || []).map((s, i) => <div className="mb-3 rounded-xl border border-white/[.08] bg-white/[.02] p-3" key={s.key}><div className="mb-2 flex items-center justify-between"><p className="text-xs font-medium text-slate-400">Section {i + 1}</p><button onClick={() => removeSection(i)} className="text-xs text-slate-500 hover:text-red-300">Remove</button></div><Input value={s.heading} aria-label="Section heading" onChange={(e) => section(i, 'heading', e.target.value)} /><Textarea className="mt-2" rows={3} aria-label="Section description" value={s.body || ''} onChange={(e) => section(i, 'body', e.target.value)} placeholder="Describe this section" /><label className="mt-2 block text-xs text-slate-500">Card labels, separated by commas<Input className="mt-1" value={(s.items || []).join(', ')} onChange={(e) => section(i, 'items', e.target.value.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 12))} /></label></div>)}<Button variant="secondary" size="sm" className="w-full" onClick={addSection} disabled={(spec.sections?.length || 0) >= 8}>+ Add section</Button></div>
+            <div className="border-t border-white/10 pt-4">
+              <div className="mb-3 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[.15em] text-violet-300">Page sections</p><span className="text-xs text-slate-500">Drag to reorder · {spec.sections?.length || 0} / 8</span></div>
+              {(spec.sections || []).map((s, i) => <div key={s.key} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); moveSection(draggedSection, i); }} className="mb-3 rounded-xl border border-white/[.08] bg-white/[.02] p-3">
+                <div className="mb-2 flex items-center gap-1">
+                  <button type="button" draggable onDragStart={(e) => { setDraggedSection(i); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => setDraggedSection(null)} aria-label={`Drag section ${i + 1}`} className="cursor-grab touch-none text-slate-500 active:cursor-grabbing"><GripVertical size={16} /></button>
+                  <p className="flex-1 text-xs font-medium text-slate-400">Section {i + 1}</p>
+                  <button type="button" aria-label="Move section up" disabled={i === 0} onClick={() => moveSection(i, i - 1)} className="rounded p-1 text-slate-500 hover:text-white disabled:opacity-30"><ArrowUp size={14} /></button>
+                  <button type="button" aria-label="Move section down" disabled={i === (spec.sections?.length || 1) - 1} onClick={() => moveSection(i, i + 1)} className="rounded p-1 text-slate-500 hover:text-white disabled:opacity-30"><ArrowDown size={14} /></button>
+                  <button type="button" onClick={() => removeSection(i)} className="ml-1 text-xs text-slate-500 hover:text-red-300">Remove</button>
+                </div>
+                <Input value={s.heading} aria-label="Section heading" onChange={(e) => section(i, 'heading', e.target.value)} />
+                <Textarea className="mt-2" rows={3} aria-label="Section description" value={s.body || ''} onChange={(e) => section(i, 'body', e.target.value)} placeholder="Describe this section" />
+                <label className="mt-2 block text-xs text-slate-500">Card labels, separated by commas<Input className="mt-1" value={(s.items || []).join(', ')} onChange={(e) => section(i, 'items', e.target.value.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 12))} /></label>
+              </div>)}
+              <Button variant="secondary" size="sm" className="w-full" onClick={addSection} disabled={(spec.sections?.length || 0) >= 8}>+ Add section</Button>
+            </div>
           </>}
-          {tab === 'design' && <><label className="block text-sm text-slate-300">Starting layout<Select className="mt-1.5" value={spec.template} onChange={(e) => change('template', e.target.value)}>{Object.entries(labels).map(([key,label]) => <option value={key} key={key}>{label}</option>)}</Select><span className="mt-1 block text-xs text-slate-500">Switch any time; your content stays in place.</span></label><div><p className="mb-2 text-sm text-slate-300">Color palette</p><div className="grid grid-cols-3 gap-2">{themes.map(({key,color}) => <button key={key} onClick={() => change('theme', key)} className={`flex items-center gap-2 rounded-xl border px-2 py-2.5 text-xs capitalize ${spec.theme === key ? 'border-violet-400 bg-violet-400/10 text-white' : 'border-white/10 text-slate-400 hover:border-white/25'}`}><span className="h-4 w-4 rounded-full" style={{background:color}} />{key}</button>)}</div></div><label className="block text-sm text-slate-300">Primary button text<Input className="mt-1.5" value={spec.cta_label || ''} onChange={(e) => change('cta_label', e.target.value)} /></label><label className="block text-sm text-slate-300">Section cards<Select className="mt-1.5" value={spec.section_style || 'outlined'} onChange={(e) => change('section_style', e.target.value)}><option value="outlined">Outlined cards</option><option value="soft">Soft color cards</option><option value="minimal">Minimal dividers</option></Select></label></>}
+          {tab === 'design' && <><label className="block text-sm text-slate-300">Starting layout<Select className="mt-1.5" value={spec.template} onChange={(e) => change('template', e.target.value)}>{Object.entries(labels).map(([key,label]) => <option value={key} key={key}>{label}</option>)}</Select><span className="mt-1 block text-xs text-slate-500">Switch any time; your content stays in place.</span></label><div><p className="mb-2 text-sm text-slate-300">Color palette</p><div className="grid grid-cols-3 gap-2">{themes.map(({key,color}) => <button key={key} onClick={() => change('theme', key)} className={`flex items-center gap-2 rounded-xl border px-2 py-2.5 text-xs capitalize ${spec.theme === key ? 'border-violet-400 bg-violet-400/10 text-white' : 'border-white/10 text-slate-400 hover:border-white/25'}`}><span className="h-4 w-4 rounded-full" style={{background:color}} />{key}</button>)}</div></div><label className="block text-sm text-slate-300">Primary button text<Input className="mt-1.5" value={spec.cta_label || ''} onChange={(e) => change('cta_label', e.target.value)} /></label><label className="block text-sm text-slate-300">Section cards<Select className="mt-1.5" value={spec.section_style || 'outlined'} onChange={(e) => change('section_style', e.target.value)}><option value="outlined">Outlined cards</option><option value="soft">Soft color cards</option><option value="minimal">Minimal dividers</option></Select></label><label className="block text-sm text-slate-300">Header layout<Select className="mt-1.5" value={spec.header_style || 'standard'} onChange={(e) => change('header_style', e.target.value)}><option value="standard">Brand left, links right</option><option value="centered">Centered navigation</option><option value="minimal">Minimal</option></Select></label><label className="block text-sm text-slate-300">Hero layout<Select className="mt-1.5" value={spec.hero_style || 'split'} onChange={(e) => change('hero_style', e.target.value)}><option value="split">Split with feature card</option><option value="centered">Centered introduction</option><option value="editorial">Editorial serif headline</option></Select></label><label className="block text-sm text-slate-300">Footer layout<Select className="mt-1.5" value={spec.footer_style || 'split'} onChange={(e) => change('footer_style', e.target.value)}><option value="split">Simple split</option><option value="centered">Centered</option><option value="contact">Contact focused</option></Select></label></>}
           {tab === 'layout' && <><p className="text-sm leading-5 text-slate-400">Choose which parts appear on your published page.</p>{toggle('show_header', 'Header navigation', 'Show your name and links to page sections.')}{toggle('show_cta', 'Hero button', 'Give visitors a clear next step.')}{toggle('show_contact', 'Contact details', 'Show your email, phone, and location.')}{toggle('show_footer', 'Footer', 'Add a sign-off and your social links.')}<label className="block text-sm text-slate-300">Footer note<Input className="mt-1.5" value={spec.footer_text || ''} onChange={(e) => change('footer_text', e.target.value)} placeholder="Made with care." /></label><div className="border-t border-white/10 pt-4"><p className="mb-3 text-xs font-semibold uppercase tracking-[.15em] text-violet-300">Contact & links</p><label className="block text-sm text-slate-300">Email<Input className="mt-1.5" value={spec.contact_email || ''} onChange={(e) => change('contact_email', e.target.value)} placeholder="hello@example.com" /></label><label className="mt-3 block text-sm text-slate-300">Phone<Input className="mt-1.5" value={spec.contact_phone || ''} onChange={(e) => change('contact_phone', e.target.value)} /></label><label className="mt-3 block text-sm text-slate-300">Location<Input className="mt-1.5" value={spec.location || ''} onChange={(e) => change('location', e.target.value)} /></label><label className="mt-3 block text-sm text-slate-300">Social or other links<Textarea className="mt-1.5" rows={3} placeholder={'Instagram=https://instagram.com/you\nLinkedIn=https://linkedin.com/in/you'} value={Object.entries(spec.links || {}).map(([label, url]) => `${label}=${url}`).join('\n')} onChange={(e) => change('links', Object.fromEntries(e.target.value.split('\n').map((line) => line.split('=')).filter(([label, url]) => label?.trim() && url?.trim()).map(([label, ...url]) => [label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_'), url.join('=').trim()])))} /></label></div></>}
         </div>
       </Card>

@@ -118,6 +118,18 @@ export const api = {
       body: { description },
       token: platformToken.get(),
     }),
+  planCustomSite: (description) =>
+    request('/api/plan/site/custom', {
+      method: 'POST',
+      body: { description },
+      token: platformToken.get(),
+    }),
+  siteRevisions: (id) => request(`/api/projects/${id}/revisions`, { token: platformToken.get() }),
+  restoreSiteRevision: (id, revisionId) =>
+    request(`/api/projects/${id}/revisions/${revisionId}/restore`, {
+      method: 'POST',
+      token: platformToken.get(),
+    }),
   revise: (id, instruction) =>
     request(`/api/projects/${id}/revise`, {
       method: 'POST',

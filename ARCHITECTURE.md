@@ -1,7 +1,7 @@
 # Sequence — Codebase and Request Architecture
 
 This is the current codebase architecture: its local stack, how browser
-actions reach the database/runtime, and where future LLM code writing fits.
+actions reach the database/runtime, and how the two AI build paths stay separate.
 
 ## Stack
 
@@ -12,7 +12,8 @@ actions reach the database/runtime, and where future LLM code writing fits.
 | ORM/database | SQLAlchemy 2 + SQLite locally | Users, projects, specs, records, runs, approvals and logs |
 | Production database | PostgreSQL | Intended replacement for SQLite; models are portable |
 | Authentication | Signed bearer tokens + password hashes | Owner token and separate, per-app staff token |
-| AI provider seam | `app/ai/provider.py` | Anthropic/Groq if configured; template fallback without any key |
+| AI provider seam | `app/ai/provider.py` | Groq, Gemini and Anthropic with provider failover; templates remain available without keys |
+| Custom website agents | `app/ai/site_agents.py` | LangGraph planner, designer, React builder, reviewer and build verifier |
 | Runtime | Python workflow executor | Runs validated workflow specs and records every step |
 
 Locally, React is served from `http://localhost:5173` and FastAPI from
@@ -82,6 +83,8 @@ erDiagram
       string slug "globally unique"
       json draft_spec
       json published_spec
+      json draft_files
+      json published_files
     }
     RECORDS {
       string project_id "required tenant scope"
@@ -92,8 +95,9 @@ erDiagram
 
 `Project` is shared by both builders. `kind = site` holds a `SiteSpec`;
 `kind = app` holds an `AppSpec`. Publish freezes a draft by copying it to
-`published_spec`. `RecordStore` requires `project_id`, so record reads and
-writes are server-side tenant scoped.
+`published_spec` and any custom-site build files. Custom site source snapshots
+live in `site_revisions` and can be restored as a new draft. `RecordStore`
+requires `project_id`, so record reads and writes are server-side tenant scoped.
 
 ## Complete system flow
 
@@ -106,15 +110,20 @@ flowchart TB
     Projects --> DB[(SQLite local\nPostgreSQL production)]
 
     Projects --> Choice{Build type}
-    Choice -->|Website| SitePlan[Site template/planner]
+    Choice -->|Website template| SitePlan[Site template/planner]
+    Choice -->|Custom website| SiteGraph[LangGraph product/design/code/review agents]
     Choice -->|Workflow| AppPlan[App template/planner]
     SitePlan --> SiteSpec[SiteSpec]
+    SiteGraph --> SiteBuild[React TSX + Tailwind]
+    SiteBuild --> BuildCheck[esbuild and Tailwind build check]
+    BuildCheck --> DraftFiles[Save source + compiled files]
     AppPlan --> AppSpec[AppSpec + validator]
     SiteSpec --> Draft[Save draft_spec]
+    DraftFiles --> Draft
     AppSpec --> Draft
     Draft --> Preview[Live preview / safe test run]
     Preview -->|Publish| Frozen[Copy to published_spec]
-    Frozen --> PublicSite[/s/:slug · SiteCanvas/]
+    Frozen --> PublicSite[/s/:slug · template renderer or sandboxed custom site/]
     Frozen --> PublicApp[/a/:slug · staff runtime/]
     PublicApp -->|separate app token| RuntimeAPI[runtime.py]
     RuntimeAPI --> Engine[Workflow executor]
@@ -129,31 +138,33 @@ sequenceDiagram
     actor Owner
     participant UI as React: Dashboard/NewSite
     participant API as FastAPI projects router
+    participant Agents as LangGraph site agents
     participant DB as SQLite/Postgres
-    participant Render as SiteCanvas
+    participant Render as Template renderer or sandbox iframe
 
-    Owner->>UI: Click New website and choose a template
-    Owner->>UI: Enter a name and optional description
-    alt Template-first / no AI key
+    Owner->>UI: Choose a starter template or custom AI site
+    alt Template path
         UI->>API: POST /api/projects with SiteSpec
-    else AI key configured and description given
-        UI->>API: POST /api/plan/site
-        API-->>UI: Valid SiteSpec (or Echo fallback)
-        UI->>API: POST /api/projects with SiteSpec
+    else Custom AI site
+        UI->>API: POST /api/plan/site/custom
+        API->>Agents: Planner → designer → React builder → reviewer
+        Agents->>Agents: esbuild + Tailwind compile; one repair attempt
+        Agents-->>API: Valid SiteSpec and checked TSX/CSS
+        UI->>API: POST /api/projects with source files
     end
-    API->>DB: Insert draft Project
-    API-->>UI: Project id and /s/slug
-    UI->>Render: Render editable spec preview
-    Owner->>UI: Save and click Publish
+    API->>DB: Save project and source revision
+    API-->>UI: Project id, editable files and /s/slug
+    UI->>Render: Show isolated preview and code editor
+    Owner->>UI: Save, restore a version, or publish
     UI->>API: PATCH project; POST /publish
-    API->>DB: Freeze published_spec
+    API->>DB: Freeze spec and compiled assets
     Render->>API: Visitor opens /s/slug; GET /api/s/slug
-    API->>DB: Read published SiteSpec only
+    API->>DB: Read published snapshot
 ```
 
-The five supported renderers are Portfolio, Freelancer, Local Business, Event
-and Personal. They render trusted React markup from `SiteSpec` data, never
-user-provided HTML or JavaScript.
+The starter library has 20 directions. Template sites render trusted React
+markup from a `SiteSpec`; custom sites render their compiled React bundle only
+inside an opaque-origin iframe with a restrictive Content Security Policy.
 
 ## B. Workflow click-by-click flow
 
@@ -167,16 +178,15 @@ sequenceDiagram
     participant DB as SQLite/Postgres
     participant Engine as Workflow executor
 
-    Owner->>UI: Choose New workflow or a demo template
-    UI->>API: POST /api/plan/app
-    API->>Plan: Request strict JSON; retry once if invalid
-    alt no key / provider unavailable
-        Plan-->>API: Closest built-in workflow template
-    else valid provider result
-        Plan-->>API: AppSpec
+    Owner->>UI: Choose custom workflow or a template
+    alt Built-in template
+        UI->>API: POST /api/projects/from-template
+    else Custom workflow
+        UI->>API: POST /api/plan/app
+        API->>Plan: Request strict JSON; retry once if invalid
+        Plan-->>API: AppSpec only after catalog and cross-reference validation
+        API-->>UI: Plain-language plan and valid AppSpec, or provider/validation error
     end
-    Plan-->>API: Catalog + cross-reference validation passes
-    API-->>UI: Plain-language plan and valid AppSpec
     Owner->>UI: Build, test, invite staff and publish
     UI->>API: Create project / test-run / publish
     API->>DB: Draft/frozen spec, memberships and history
@@ -190,38 +200,28 @@ sequenceDiagram
     Engine->>DB: Completed run and notifications
 ```
 
-## AI availability and pending code-writing path
+## AI providers and custom website graph
 
-No API key is required for the current experience. When neither
-`ANTHROPIC_API_KEY` nor `GROQ_API_KEY` exists, configuration resolves to
-`EchoProvider`: workflow prompts choose the closest JSON demo template and
-website prompts return a basic `SiteSpec`. Preview, test and publishing stay
-fully available.
+Templates and the workflow runtime remain available without API keys. Custom
+workflow and custom website generation require a configured AI provider. Groq,
+Gemini and Anthropic can be configured; requests try configured providers in
+order and fall back between providers. This is provider failover, not cycling
+multiple keys to evade a single provider’s quotas.
 
-With an AI key, the planner asks for strict JSON, parses it through Pydantic,
-validates it, and retries once with the error feedback. It never executes
-model-written JavaScript, shell commands or SQL.
+Workflow planning still returns an `AppSpec`, validates every reference and
+never executes model-written JavaScript, shell commands or SQL. Custom websites
+are a separate fixed-stack path. LangGraph nodes plan product content, design
+the layout, write React TSX and CSS, review the result, and compile it with
+fixed local esbuild/Tailwind binaries. Generated code does not execute during
+compilation. On a build error, one repair attempt runs before the build fails.
 
-Actual code writing is a **pending third project type**, not a replacement for
-the safe template/runtime path:
-
-```mermaid
-flowchart LR
-    Request[Owner requests coded project] --> Planner[Planner agent selects recipe]
-    Planner --> Writer[Code-writer agent\nisolated workspace]
-    Writer --> Review[Build/test/review agents]
-    Review --> Status[Real job status + ETA]
-    Status --> Approval{Owner approves artifact?}
-    Approval -->|Yes| Preview[Separate-origin sandbox preview]
-    Preview --> Export[Download, Git connection or explicit deploy]
-    Approval -->|Revise| Writer
-```
-
-The eventual ETA must be computed from queued-job and step progress, never
-invented in the UI. Until that worker system exists, call it **Coming soon**.
-Generated code must use separate containers/origins, restricted filesystems,
-package allowlists, command timeouts, no platform secrets, build logs and an
-explicit deployment approval.
+Custom source and compiled assets are stored in SQL JSON columns; `site_revisions`
+keeps versioned snapshots. MongoDB is not needed for this project-file scale.
+The browser preview uses an iframe without `allow-same-origin`, no app storage,
+no form submission, and CSP network access restricted to image hosts. Before
+public launch, move compilation from the API process into a dedicated worker
+container with resource limits. The PostgreSQL schema update is in
+`apps/api/migrations/0002_custom_sites.sql`.
 
 ## Security boundaries to preserve
 
@@ -230,6 +230,7 @@ explicit deployment approval.
   permissions are rechecked on the API for every action.
 - Ownership and `project_id` record scoping are server enforced, not frontend
   button visibility.
-- Public sites read frozen `SiteSpec` data only and do not host arbitrary code.
+- Public template sites read frozen `SiteSpec`; custom sites read frozen compiled files and run inside a sandboxed iframe.
+- Do not add `allow-same-origin` or loosen the CSP on custom-site preview iframes.
 - A workflow run holds its starting spec snapshot, so draft edits cannot alter
   an approval that is paused in progress.

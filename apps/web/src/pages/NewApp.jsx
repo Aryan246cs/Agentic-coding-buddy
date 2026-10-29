@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Blocks, Sparkles } from 'lucide-react';
 
 import { api } from '../lib/api';
 import Chrome from '../components/Chrome';
@@ -17,10 +18,25 @@ export default function NewApp() {
   const navigate = useNavigate();
 
   const [description, setDescription] = useState('');
+  const [mode, setMode] = useState('custom');
+  const [templates, setTemplates] = useState([]);
+  const [startingTemplate, setStartingTemplate] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [planning, setPlanning] = useState(false);
   const [building, setBuilding] = useState(false);
+
+  async function browseTemplates() {
+    setMode('template'); setResult(null); setError(null);
+    try { const data = await api.templates(); setTemplates(data.apps || []); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function startFromTemplate(key) {
+    setStartingTemplate(key); setError(null);
+    try { const project = await api.createFromTemplate(key); navigate(`/projects/${project.id}`); }
+    catch (err) { setError(err.message); setStartingTemplate(null); }
+  }
 
   async function makePlan(event) {
     event?.preventDefault();
@@ -55,11 +71,22 @@ export default function NewApp() {
   return (
     <Chrome>
       <PageHeader
-        title="What do you need?"
-        subtitle="Describe how it works in your team today. Plain words are fine."
+        title="Build a workflow"
+        subtitle="Start from a ready-made example or describe the process your team actually needs."
       />
 
-      <form onSubmit={makePlan}>
+      <div className="mb-7 grid gap-4 sm:grid-cols-2">
+        <button onClick={() => setMode('custom')} className={`rounded-2xl border p-5 text-left transition ${mode === 'custom' ? 'border-violet-400/70 bg-violet-400/[.08]' : 'border-white/10 bg-white/[.025] hover:border-white/25'}`}>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-400/10 text-violet-200"><Sparkles size={20} /></span><h2 className="mt-4 text-lg font-semibold text-white">Describe a custom workflow</h2><p className="mt-1 text-sm leading-6 text-slate-400">Tell the AI who submits requests, what happens next, and what your own process needs.</p>
+        </button>
+        <button onClick={browseTemplates} className={`rounded-2xl border p-5 text-left transition ${mode === 'template' ? 'border-cyan-300/60 bg-cyan-300/[.06]' : 'border-white/10 bg-white/[.025] hover:border-white/25'}`}>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-300/10 text-cyan-200"><Blocks size={20} /></span><h2 className="mt-4 text-lg font-semibold text-white">Start with a template</h2><p className="mt-1 text-sm leading-6 text-slate-400">Open an example workflow, then make its roles, forms, and approval rules your own.</p>
+        </button>
+      </div>
+
+      {mode === 'template' && <Card className="mb-8 p-5"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-white">Workflow starters</h2><p className="mt-1 text-sm text-slate-400">These are starting points. You can change the full workflow afterwards.</p></div><button onClick={() => setMode('custom')} className="text-sm text-violet-200 hover:text-white">Describe my own →</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{templates.map((template) => <div key={template.key} className="flex flex-col rounded-xl border border-white/10 bg-white/[.025] p-4"><h3 className="font-medium text-white">{template.name}</h3><p className="mt-2 flex-1 text-sm leading-5 text-slate-400">{template.blurb}</p><p className="mt-3 text-xs text-slate-500">{template.roles?.join(' · ')}</p><Button className="mt-4" size="sm" variant="secondary" loading={startingTemplate === template.key} onClick={() => startFromTemplate(template.key)}>Open this starter</Button></div>)}</div></Card>}
+
+      {mode === 'custom' && <form onSubmit={makePlan}>
         <Textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
@@ -76,9 +103,9 @@ export default function NewApp() {
             Nothing is built yet — you will see the plan first.
           </span>
         </div>
-      </form>
+      </form>}
 
-      {!result && !planning && (
+      {mode === 'custom' && !result && !planning && (
         <div className="mt-8">
           <p className="text-sm font-medium text-slate-600">Or try one of these:</p>
           <div className="mt-3 space-y-2">
@@ -101,7 +128,7 @@ export default function NewApp() {
         </div>
       )}
 
-      {result && (
+      {mode === 'custom' && result && (
         <div className="mt-10">
           {result.offline && (
             <div className="mb-6">

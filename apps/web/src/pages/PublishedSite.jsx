@@ -10,6 +10,7 @@ import { useParams } from 'react-router-dom';
 import { runtimeApi } from '../lib/api';
 import { Card, Loading } from '../components/ui';
 import SiteCanvas from '../components/SiteCanvas';
+import GeneratedSiteCanvas from '../components/GeneratedSiteCanvas';
 
 export default function PublishedSite() {
   const { slug } = useParams();
@@ -36,5 +37,7 @@ export default function PublishedSite() {
 
   if (!site) return <Loading />;
 
-  return <SiteCanvas spec={site.spec} />;
+  return site.files
+    ? <GeneratedSiteCanvas files={site.files} title={site.name} />
+    : <SiteCanvas spec={site.spec} />;
 }

@@ -66,7 +66,12 @@ class SitePlanResult:
 # --------------------------------------------------------------------------
 
 
-def plan_app(description: str, provider: AIProvider | None = None) -> PlanResult:
+def plan_app(
+    description: str,
+    provider: AIProvider | None = None,
+    *,
+    allow_template_fallback: bool = True,
+) -> PlanResult:
     """Build an app spec from a description."""
     description = description.strip()
     if len(description) < 15:
@@ -78,6 +83,11 @@ def plan_app(description: str, provider: AIProvider | None = None) -> PlanResult
     provider = provider or get_provider()
 
     if isinstance(provider, EchoProvider):
+        if not allow_template_fallback:
+            raise AIError(
+                "Custom workflow generation needs an AI provider. Configure GROQ_API_KEY, "
+                "GEMINI_API_KEY, or ANTHROPIC_API_KEY, then try again."
+            )
         return _offline_plan(description)
 
     prompt = f"Build a configuration for this:\n\n{description}"
@@ -86,6 +96,7 @@ def plan_app(description: str, provider: AIProvider | None = None) -> PlanResult
         system=prompts.APP_PLANNER_SYSTEM,
         prompt=prompt,
         source_description=description,
+        allow_template_fallback=allow_template_fallback,
     )
 
 
@@ -100,8 +111,8 @@ def revise_app(
     provider = provider or get_provider()
     if isinstance(provider, EchoProvider):
         raise PlanningError(
-            "Editing with words needs an AI key. Set ANTHROPIC_API_KEY or "
-            "GROQ_API_KEY, or edit the app directly."
+            "Editing with words needs an AI key. Set GROQ_API_KEY, GEMINI_API_KEY, "
+            "or ANTHROPIC_API_KEY, or edit the app directly."
         )
 
     current = spec.model_dump_json(indent=None, exclude_defaults=True)
@@ -119,6 +130,7 @@ def _attempt(
     system: str,
     prompt: str,
     source_description: str | None = None,
+    allow_template_fallback: bool = True,
 ) -> PlanResult:
     """Ask, validate, and retry once with the errors in hand."""
     schema = _app_schema()
@@ -180,7 +192,7 @@ def _attempt(
         logger.info("planner attempt %s failed validation: %s", attempt, last_problem)
         messages = f"{prompt}\n\n{prompts.repair_prompt(last_problem)}"
 
-    if source_description:
+    if source_description and allow_template_fallback:
         # Rather than hand the user a dead end, fall back to the closest
         # template and say so. Someone describing their leave process should
         # get something they can edit, not an apology about our AI provider.
@@ -199,11 +211,14 @@ def _attempt(
     # A revision has no template to fall back to — changing an existing app
     # means changing that app, not replacing it with a stock one.
     if unreachable:
+        if source_description and not allow_template_fallback:
+            raise AIError(f"The AI could not be reached: {unreachable}")
         raise PlanningError(f"The AI could not be reached: {unreachable}")
 
+    target = "custom workflow" if source_description else "change"
     raise PlanningError(
-        "The change could not be applied cleanly. "
-        f"What went wrong:\n{last_problem}",
+        f"The {target} could not be validated. "
+        f"Please clarify the request or simplify a rule.\n{last_problem}",
         last_report,
     )
 

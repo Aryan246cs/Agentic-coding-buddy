@@ -580,5 +580,6 @@ def get_site(slug: str, session: SessionDep) -> dict[str, Any]:
         "slug": project.slug,
         "name": project.name,
         "spec": project.published_spec,
+        "files": project.published_files,
         "published_at": project.published_at.isoformat() if project.published_at else None,
     }

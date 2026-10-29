@@ -158,11 +158,17 @@ class Project(Base, TimestampMixin):
     #: so editing a draft never changes what visitors see until Publish.
     draft_spec: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     published_spec: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    #: Editable source and its compiled, self-contained preview assets.
+    draft_files: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    published_files: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     owner: Mapped[User] = relationship(back_populates="projects")
     app_users: Mapped[list[AppUser]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
+    )
+    revisions: Mapped[list[SiteRevision]] = relationship(
+        back_populates="project", cascade="all, delete-orphan", order_by="SiteRevision.version"
     )
 
     @property
@@ -173,6 +179,29 @@ class Project(Base, TimestampMixin):
     def live_spec(self) -> dict[str, Any] | None:
         """What the runtime should serve: the published copy if there is one."""
         return self.published_spec or self.draft_spec
+
+
+class SiteRevision(Base):
+    """A restorable snapshot of custom website source and its content spec."""
+
+    __tablename__ = "site_revisions"
+    __table_args__ = (
+        UniqueConstraint("project_id", "version", name="uq_site_revision_version"),
+        Index("ix_site_revisions_project", "project_id", "version"),
+    )
+
+    id: PrimaryKey = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    prompt: Mapped[str | None] = mapped_column(Text)
+    spec: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    files: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    project: Mapped[Project] = relationship(back_populates="revisions")
 
 
 # --------------------------------------------------------------------------

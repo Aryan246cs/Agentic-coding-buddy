@@ -1,11 +1,12 @@
 """The AI seam.
 
-One interface, three implementations. Everything above this file asks for
+One interface, several implementations. Everything above this file asks for
 "JSON matching this schema" and does not care who answered, which is what
 makes the provider a configuration choice rather than an architectural one.
 
-  * `AnthropicProvider` — the one to prefer; structured output is reliable.
-  * `GroqProvider`      — what this project already had a key for.
+  * `GroqProvider`      — primary low-latency provider.
+  * `GeminiProvider`    — alternate provider and standard provider-level fallback.
+  * `AnthropicProvider` — optional structured-output provider.
   * `EchoProvider`      — no key needed. Returns a hand-built spec so the whole
                           product can be developed and demoed offline.
 
@@ -21,6 +22,8 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
+
+import httpx
 
 from app.config import Settings, get_settings
 
@@ -282,6 +285,65 @@ class GroqProvider(AIProvider):
         )
 
 
+class GeminiProvider(AIProvider):
+    """Gemini REST provider; keeps the optional SDK out of the install."""
+
+    name = "gemini"
+
+    def __init__(self, settings: Settings):
+        self.api_key = settings.gemini_api_key
+        self.model = settings.gemini_model
+
+    def complete(self, *, system, prompt, schema=None, max_tokens=8000, fast=False):
+        del fast
+        del schema  # JSON response mode is used; Pydantic validates the contract downstream.
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+        payload = {
+            "systemInstruction": {"parts": [{"text": system}]},
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {"maxOutputTokens": max_tokens, "responseMimeType": "application/json"},
+        }
+        try:
+            response = httpx.post(url, headers={"x-goog-api-key": self.api_key or ""}, json=payload, timeout=90)
+            response.raise_for_status()
+            body = response.json()
+        except Exception as exc:  # noqa: BLE001
+            raise AIError(f"Gemini could not be reached: {exc}") from exc
+        candidates = body.get("candidates") or []
+        parts = (candidates[0].get("content", {}).get("parts", []) if candidates else [])
+        text = "".join(part.get("text", "") for part in parts)
+        if not text:
+            raise AIError("Gemini returned no website content. Try again in a moment.")
+        usage = body.get("usageMetadata", {})
+        return Completion(
+            text=text,
+            provider=self.name,
+            model=self.model,
+            input_tokens=usage.get("promptTokenCount", 0),
+            output_tokens=usage.get("candidatesTokenCount", 0),
+        )
+
+
+class ProviderPool(AIProvider):
+    """Sequential failover between configured providers; each provider key is used as configured."""
+
+    name = "provider-pool"
+
+    def __init__(self, providers: list[AIProvider]):
+        self.providers = providers
+        self.model = ",".join(getattr(item, "model", item.name) for item in providers)
+
+    def complete(self, *, system, prompt, schema=None, max_tokens=8000, fast=False):
+        failures = []
+        for provider in self.providers:
+            try:
+                return provider.complete(system=system, prompt=prompt, schema=schema, max_tokens=max_tokens, fast=fast)
+            except AIError as exc:
+                failures.append(f"{provider.name}: {exc}")
+                logger.warning("%s failed; trying the next configured provider", provider.name)
+        raise AIError("All configured AI providers failed. " + " | ".join(failures))
+
+
 @dataclass
 class _ProviderCache:
     instance: AIProvider | None = None
@@ -292,24 +354,37 @@ _cache: _ProviderCache = _ProviderCache()
 
 
 def get_provider(settings: Settings | None = None) -> AIProvider:
-    """The provider the current configuration can actually use."""
+    """Configured provider order, with provider-level failover when available."""
     settings = settings or get_settings()
     choice = settings.resolved_provider
 
     if _cache.instance is not None and _cache.key == choice:
         return _cache.instance
 
-    match choice:
-        case "anthropic":
-            provider: AIProvider = AnthropicProvider(settings)
-        case "groq":
-            provider = GroqProvider(settings)
-        case _:
-            logger.warning(
-                "No AI key configured — using the offline planner. Set "
-                "ANTHROPIC_API_KEY or GROQ_API_KEY for real generation."
-            )
-            provider = EchoProvider()
+    names = choice.split("+")
+    providers: list[AIProvider] = []
+    for name in names:
+        try:
+            match name:
+                case "anthropic":
+                    providers.append(AnthropicProvider(settings))
+                case "groq":
+                    providers.append(GroqProvider(settings))
+                case "gemini":
+                    providers.append(GeminiProvider(settings))
+        except AIError as exc:
+            logger.warning("Configured %s provider is unavailable: %s", name, exc)
+
+    if not providers:
+        logger.warning(
+            "No AI key configured — using the offline planner. Set GROQ_API_KEY, "
+            "GEMINI_API_KEY, or ANTHROPIC_API_KEY for real generation."
+        )
+        provider: AIProvider = EchoProvider()
+    elif len(providers) == 1:
+        provider = providers[0]
+    else:
+        provider = ProviderPool(providers)
 
     _cache.instance = provider
     _cache.key = choice

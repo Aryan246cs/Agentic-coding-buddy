@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, event
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -49,6 +50,15 @@ def create_all() -> None:
     notes in BUILD_PLAN.md.
     """
     Base.metadata.create_all(bind=engine)
+    # Additive local-development upgrade for databases created before custom
+    # website source files were introduced. Production deployments should run
+    # the equivalent Alembic migration before releasing the new API.
+    if _is_sqlite:
+        columns = {column["name"] for column in inspect(engine).get_columns("projects")}
+        with engine.begin() as connection:
+            for name in ("draft_files", "published_files"):
+                if name not in columns:
+                    connection.execute(text(f"ALTER TABLE projects ADD COLUMN {name} JSON"))
 
 
 def get_session() -> Iterator[Session]:

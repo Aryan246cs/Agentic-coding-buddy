@@ -57,10 +57,11 @@ A leave request, an expense claim, a customer complaint, a purchase order, a cli
 
 ### Product A — Website Builder (the front door)
 
-Describe your business → get a clean, published one-page site (portfolio, freelancer page, small business page, event page) at your own link in about two minutes.
+Choose one of 20 polished starting points, or describe a fully custom site and get a React/TypeScript build with a live preview and version history.
 
 - **Purpose:** low-risk, instant win. It is how strangers become signed-up users.
-- **Not** a Wix competitor. 4–5 good templates, AI fills in the words and pictures.
+- The template path has 20 ready-made directions and controls for page sections, header/footer, calls to action, colors and cards.
+- The custom path uses LangGraph planner, designer, builder, reviewer and build-check stages to write a React + TypeScript + Tailwind site from a detailed brief.
 - Free forever. No credit card. This is marketing, not revenue.
 
 ### Product B — Workflow Builder (the real product)
@@ -93,33 +94,26 @@ Building the site builder first means the hardest boring parts (auth, hosting, p
 
 ---
 
-## 5. The one architectural rule
+## 5. The safety boundary
 
-**The AI never writes code that we run. The AI fills in a form.**
+**Workflow models fill a typed form. Website code is a separate, constrained build artifact.**
 
 ```
-Plain English
-     ↓
-  AI Planner  ──── produces ────→  JSON spec (strictly typed)
-     ↓
-  Validator   ──── rejects anything not in our catalog
-     ↓
-  Runtime     ──── reads the spec and renders / executes it
-     ↓
-Live app at a URL
+Workflow: plain English → AI planner → typed AppSpec → validator → workflow runtime
+Custom site: brief → LangGraph roles → React/TSX + CSS → fixed build tools → opaque-origin iframe
 ```
 
-The AI picks from a fixed menu of ~15 building blocks. It cannot invent a block. It cannot write SQL. It cannot call an API we did not allow. If the AI produces nonsense, the validator catches it before the user ever sees it.
+Workflow planning picks from a fixed menu of about fifteen building blocks. It cannot invent a block, write SQL, or call an API we did not allow. Custom website generation is intentionally isolated from that workflow runtime: it writes only `App.tsx` and `styles.css`, uses an import allowlist, and passes a fixed build check before preview.
 
 **Why this matters:**
 
 - **Predictable** — the same spec always behaves the same way.
-- **Safe** — no generated code runs on our servers or our domain.
+- **Safe** — custom code is parsed by fixed build tools and runs only in a sandboxed browser frame, outside the platform origin.
 - **Cheap** — one small AI call per build, not thousands of tokens of code.
 - **Fixable** — a bug in a form is fixed once in the renderer, for every user at once.
 - **Fast** — published pages load from a cached spec, not from an AI call.
 
-This is also the honest answer to "how is this different from Lovable/Bolt?" They generate a codebase. We generate a configuration for a runtime we control. Theirs is more flexible. Ours actually runs, has permissions, and has an audit trail.
+Workflow apps remain typed, permissioned and auditable. Custom websites get the flexibility of generated code without sharing the workflow runtime's security boundary.
 
 ---
 
@@ -276,6 +270,6 @@ These also become your homepage examples and your one-click templates.
 
 Writing these down so you don't drift:
 
-custom domains · charts and analytics · drag-and-drop page designer · file uploads · payments · Slack/WhatsApp integration · mobile apps · team collaboration on one app · versioning and rollback · white-label · API for customers · self-hosting · templates marketplace · Kubernetes · per-customer servers
+custom domains · charts and analytics · general-purpose drag-and-drop page designer · file uploads · payments · Slack/WhatsApp integration · mobile apps · team collaboration on one app · white-label · API for customers · self-hosting · templates marketplace · Kubernetes · per-customer servers
 
 Every one of these is a reasonable thing to want. None of them is why someone will pay you the first ₹299.

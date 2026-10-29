@@ -357,3 +357,6 @@ class SiteSpec(SpecModel):
     show_cta: bool = True
     footer_text: str | None = Field(default=None, max_length=120)
     section_style: Literal["outlined", "soft", "minimal"] = "outlined"
+    header_style: Literal["standard", "centered", "minimal"] = "standard"
+    hero_style: Literal["split", "centered", "editorial"] = "split"
+    footer_style: Literal["split", "centered", "contact"] = "split"

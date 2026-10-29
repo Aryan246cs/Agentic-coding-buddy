@@ -7,6 +7,7 @@ nothing an owner does here changes what their staff see until they publish.
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -15,6 +16,7 @@ from sqlalchemy import desc, func, select
 
 from app.ai.planner import PlanningError, plan_app, plan_site, revise_app
 from app.ai.provider import AIError
+from app.ai.site_agents import build_custom_site
 from app.config import get_settings
 from app.deps import CurrentUser, OwnedApp, OwnedProject, SessionDep, draft_spec_of
 from app.engine.executor import build_trigger_context, run_summary, start_run
@@ -24,12 +26,14 @@ from app.models import (
     Project,
     ProjectKind,
     ProjectStatus,
+    SiteRevision,
     UsageEvent,
     WorkflowRun,
     utcnow,
 )
 from app.runtime.memory_store import MemoryRecordStore
 from app.runtime.records import RecordStore
+from app.sites.codebuild import SiteBuildError, build_site_files
 from app.sites.templates import SITE_TEMPLATES, SITE_THEMES
 from app.specs.catalog import RESERVED_SLUGS
 from app.specs.describe import describe_plan
@@ -55,6 +59,7 @@ class CreateFromPlanRequest(BaseModel):
     name: str | None = Field(default=None, max_length=120)
     source_prompt: str | None = Field(default=None, max_length=4000)
     spec: dict[str, Any]
+    files: dict[str, str] | None = None
 
 
 class CreateFromTemplateRequest(BaseModel):
@@ -65,6 +70,7 @@ class UpdateProjectRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     slug: str | None = Field(default=None, min_length=2, max_length=48)
     spec: dict[str, Any] | None = None
+    files: dict[str, str] | None = None
 
 
 class ReviseRequest(BaseModel):
@@ -94,8 +100,12 @@ def _project_payload(project: Project, *, with_spec: bool = False) -> dict[str, 
     }
     if with_spec:
         payload["spec"] = project.draft_spec
+        payload["files"] = project.draft_files
         payload["has_unpublished_changes"] = (
-            project.is_published and project.draft_spec != project.published_spec
+            project.is_published and (
+                project.draft_spec != project.published_spec
+                or project.draft_files != project.published_files
+            )
         )
     return payload
 
@@ -186,7 +196,7 @@ def get_templates() -> dict[str, Any]:
 @router.post("/plan/app")
 def plan_an_app(body: PlanRequest, session: SessionDep, user: CurrentUser) -> dict[str, Any]:
     try:
-        result = plan_app(body.description)
+        result = plan_app(body.description, allow_template_fallback=False)
     except PlanningError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     except AIError as exc:
@@ -224,6 +234,41 @@ def plan_a_site(body: PlanRequest, session: SessionDep, user: CurrentUser) -> di
     return {"spec": result.spec.model_dump(mode="json"), "offline": result.offline}
 
 
+@router.post("/plan/site/custom")
+def plan_custom_site(body: PlanRequest, session: SessionDep, user: CurrentUser) -> dict[str, Any]:
+    """Run product, design, code, review and compile stages for a custom site."""
+    _check_project_limit(session, user)
+    recent_generations = session.scalar(
+        select(func.count()).select_from(UsageEvent).where(
+            UsageEvent.user_id == user.id,
+            UsageEvent.created_at >= utcnow() - timedelta(hours=24),
+            UsageEvent.kind.in_(["generation", "custom_site_generation"]),
+        )
+    ) or 0
+    if recent_generations >= settings.max_generations_per_day:
+        raise HTTPException(status_code=429, detail="You have reached today's website and workflow generation limit. Try again tomorrow.")
+    usage_event = UsageEvent(user_id=user.id, kind="custom_site_generation")
+    session.add(usage_event)
+    session.commit()
+    try:
+        result = build_custom_site(body.description)
+    except AIError as exc:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    usage_event.provider = result.provider[:32]
+    usage_event.model = result.model[:64]
+    usage_event.input_tokens = result.input_tokens
+    usage_event.output_tokens = result.output_tokens
+    usage_event.cost_micros = result.cost_micros
+    session.commit()
+    return {
+        "spec": result.spec.model_dump(mode="json"),
+        "files": {name: result.files[name] for name in ("App.tsx", "styles.css")},
+        "agents": result.agent_log,
+        "offline": False,
+    }
+
+
 # --------------------------------------------------------------------------
 # Projects
 # --------------------------------------------------------------------------
@@ -259,6 +304,15 @@ def create_project(
             ) from exc
         name = body.name or site.site_name
 
+    compiled_files = None
+    if body.files is not None:
+        if body.kind != "site":
+            raise HTTPException(status_code=422, detail="Code files are only available for websites.")
+        try:
+            compiled_files = build_site_files(body.files)
+        except SiteBuildError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     project = Project(
         owner_id=user.id,
         kind=ProjectKind.APP if body.kind == "app" else ProjectKind.SITE,
@@ -267,9 +321,17 @@ def create_project(
         status=ProjectStatus.DRAFT,
         source_prompt=body.source_prompt,
         draft_spec=body.spec,
+        draft_files=compiled_files,
     )
     session.add(project)
     session.commit()
+
+    if compiled_files:
+        session.add(SiteRevision(
+            project_id=project.id, version=1, label="First AI build",
+            prompt=body.source_prompt, spec=body.spec, files=compiled_files,
+        ))
+        session.commit()
 
     return _project_payload(project, with_spec=True)
 
@@ -311,6 +373,8 @@ def get_project(project: OwnedProject) -> dict[str, Any]:
 def update_project(
     body: UpdateProjectRequest, project: OwnedProject, session: SessionDep
 ) -> dict[str, Any]:
+    previous_spec = project.draft_spec
+    previous_files = project.draft_files
     if body.name is not None:
         project.name = body.name.strip()[:120]
 
@@ -346,6 +410,77 @@ def update_project(
                 ) from exc
         project.draft_spec = body.spec
 
+    if body.files is not None:
+        if project.kind != ProjectKind.SITE:
+            raise HTTPException(status_code=422, detail="Code files are only available for websites.")
+        try:
+            project.draft_files = build_site_files(body.files)
+        except SiteBuildError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if project.draft_files and (
+        previous_spec != project.draft_spec or previous_files != project.draft_files
+    ):
+        latest = session.scalar(
+            select(func.max(SiteRevision.version)).where(SiteRevision.project_id == project.id)
+        ) or 0
+        session.add(SiteRevision(
+            project_id=project.id,
+            version=latest + 1,
+            label="Saved changes",
+            prompt=project.source_prompt,
+            spec=project.draft_spec or {},
+            files=project.draft_files,
+        ))
+
+    project.updated_at = utcnow()
+    session.commit()
+    return _project_payload(project, with_spec=True)
+
+
+@router.get("/projects/{project_id}/revisions")
+def list_site_revisions(project: OwnedProject, session: SessionDep) -> dict[str, Any]:
+    if project.kind != ProjectKind.SITE:
+        raise HTTPException(status_code=404, detail="This project has no website revisions.")
+    revisions = session.scalars(
+        select(SiteRevision)
+        .where(SiteRevision.project_id == project.id)
+        .order_by(desc(SiteRevision.version))
+    ).all()
+    return {"revisions": [{
+        "id": item.id,
+        "version": item.version,
+        "label": item.label,
+        "prompt": item.prompt,
+        "created_at": item.created_at.isoformat(),
+    } for item in revisions]}
+
+
+@router.post("/projects/{project_id}/revisions/{revision_id}/restore")
+def restore_site_revision(
+    revision_id: str, project: OwnedProject, session: SessionDep
+) -> dict[str, Any]:
+    if project.kind != ProjectKind.SITE:
+        raise HTTPException(status_code=404, detail="This project has no website revisions.")
+    revision = session.scalars(select(SiteRevision).where(
+        SiteRevision.id == revision_id,
+        SiteRevision.project_id == project.id,
+    )).first()
+    if revision is None:
+        raise HTTPException(status_code=404, detail="That saved version could not be found.")
+    project.draft_spec = revision.spec
+    project.draft_files = revision.files
+    latest = session.scalar(
+        select(func.max(SiteRevision.version)).where(SiteRevision.project_id == project.id)
+    ) or 0
+    session.add(SiteRevision(
+        project_id=project.id,
+        version=latest + 1,
+        label=f"Restored version {revision.version}",
+        prompt=revision.prompt,
+        spec=revision.spec,
+        files=revision.files,
+    ))
     project.updated_at = utcnow()
     session.commit()
     return _project_payload(project, with_spec=True)
@@ -423,9 +558,15 @@ def publish(project: OwnedProject, session: SessionDep) -> dict[str, Any]:
 
     if project.kind == ProjectKind.APP:
         _validated_app_spec(project.draft_spec)
+    else:
+        try:
+            SiteSpec.model_validate(project.draft_spec)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=422, detail=f"That site configuration is not valid: {exc}") from exc
 
     # Freeze a copy. Editing the draft afterwards does not change what is live.
     project.published_spec = project.draft_spec
+    project.published_files = project.draft_files
     project.status = ProjectStatus.PUBLISHED
     project.published_at = utcnow()
     session.commit()
@@ -437,6 +578,7 @@ def publish(project: OwnedProject, session: SessionDep) -> dict[str, Any]:
 def unpublish(project: OwnedProject, session: SessionDep) -> dict[str, Any]:
     project.status = ProjectStatus.DRAFT
     project.published_spec = None
+    project.published_files = None
     project.published_at = None
     session.commit()
     return _project_payload(project, with_spec=True)

@@ -40,10 +40,12 @@ class Settings(BaseSettings):
     ]
 
     # --- AI ---------------------------------------------------------------
-    #: "groq", "anthropic", or "echo" (a canned planner for offline work).
+    #: First choice when multiple provider keys are configured.
     ai_provider: str = "groq"
     groq_api_key: str | None = None
     groq_model: str = "openai/gpt-oss-120b"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-3.8-flash"
     anthropic_api_key: str | None = None
     #: Used for planning, where getting valid JSON matters most.
     anthropic_model: str = "claude-sonnet-5"
@@ -62,16 +64,14 @@ class Settings(BaseSettings):
     @property
     def resolved_provider(self) -> str:
         """The provider we can actually use, given which keys are present."""
-        if self.ai_provider == "anthropic" and self.anthropic_api_key:
-            return "anthropic"
-        if self.ai_provider == "groq" and self.groq_api_key:
-            return "groq"
-        # Prefer whichever key exists over failing outright.
-        if self.anthropic_api_key:
-            return "anthropic"
-        if self.groq_api_key:
-            return "groq"
-        return "echo"
+        configured = {
+            "groq": bool(self.groq_api_key),
+            "gemini": bool(self.gemini_api_key),
+            "anthropic": bool(self.anthropic_api_key),
+        }
+        order = [self.ai_provider, "groq", "gemini", "anthropic"]
+        providers = list(dict.fromkeys(name for name in order if configured.get(name)))
+        return "+".join(providers) if providers else "echo"
 
 
 @lru_cache

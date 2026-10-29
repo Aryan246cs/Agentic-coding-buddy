@@ -48,11 +48,12 @@ Everything has a working default. Put overrides in `.env` at the repo root.
 | `SECRET_KEY` | a dev value | **The app refuses to boot in production without a real one** |
 | `ANTHROPIC_API_KEY` | — | Preferred for planning; most reliable at structured output |
 | `GROQ_API_KEY` | — | Also works |
+| `GEMINI_API_KEY` | — | Used after Groq when both providers are configured, or on its own |
 | `ENVIRONMENT` | `development` | Set to `production` to enable the safety checks |
 
-**With no AI key at all, everything still works.** The planner falls back to a
-matching built-in template. That is deliberate: if the product only works when
-a model is reachable, the architecture is wrong.
+**With no AI key at all, templates and the workflow runtime still work.**
+Custom AI generation explains which provider configuration is missing; it
+does not pretend a stock template is a custom build.
 
 ---
 
@@ -68,17 +69,21 @@ apps/api/          FastAPI
   app/specs/       the spec schemas, the frozen block catalog, the validator
   app/engine/      the workflow executor, step handlers, expressions
   app/runtime/     tenant-scoped record access, field coercion
-  app/ai/          provider seam + the planner
+  app/ai/          provider seam, workflow planner, LangGraph site agents
+  app/sites/       20 site starters, fixed-stack compiler and file checks
   app/routers/     auth, projects (builder), runtime (published apps)
   demos/           the three built-in templates
 ```
 
-### The one rule
+### Two build paths, separate safety boundaries
 
-**The AI never writes code we run. It fills in a form.**
+Workflow apps remain typed specs. Custom websites use a constrained React and
+TypeScript source project; generated browser code never runs on the API server
+or on the platform's origin.
 
 ```
-plain English → planner → JSON spec → validator → runtime → live app
+Workflow: plain English → planner → JSON spec → validator → live runtime
+Website: brief → LangGraph planner/designer/builder/reviewer → React + Tailwind → build check → isolated preview
 ```
 
 The planner picks from a fixed catalog of about fifteen building blocks
@@ -89,6 +94,13 @@ out the other side.
 
 This is why the product is predictable, cheap to run, safe to host on our own
 domain, and fixable in one place for every customer at once.
+
+Custom source, compiled assets, and restorable revisions live in the current
+SQL database. MongoDB is not needed for these small project files. esbuild and
+Tailwind compile from a temporary directory without executing generated code;
+the website itself runs in an opaque-origin iframe with a restrictive CSP.
+Production should move compilation into a dedicated worker before public
+launch. The schema migration is in `apps/api/migrations/0002_custom_sites.sql`.
 
 ### Things worth knowing before changing code
 
@@ -117,6 +129,8 @@ Working end to end: sign up → build → read the plan → test it → publish 
 invite colleagues → they submit requests → you approve → everyone is notified,
 with a full run log.
 
-Not built yet: the website builder UI (the backend and templates exist), email
-delivery (queued to a table, no sender wired up), and deployment. See
-[MODULES.md](MODULES.md).
+Built: 20 template starters, custom AI website generation and revisions,
+sandboxed previews, publish snapshots, and AI-planned custom workflows.
+Still pending: dedicated production build-worker isolation and deployment,
+email delivery (queued to a table, no sender wired up), and broader workflow
+template coverage. See [MODULES.md](MODULES.md).

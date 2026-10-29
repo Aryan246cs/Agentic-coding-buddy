@@ -41,6 +41,21 @@ SITE_TEMPLATES: dict[str, dict[str, Any]] = {
         "best_for": ["student", "researcher", "personal", "resume", "cv"],
         "wants_images": False,
     },
+    "agency": {"name": "Creative Agency", "blurb": "A bold studio introduction with services, selected clients, and a project enquiry.", "best_for": ["agency", "branding", "creative studio", "marketing", "design studio"], "wants_images": True},
+    "restaurant": {"name": "Restaurant & Café", "blurb": "A warm home for your menu, opening hours, location, and reservations.", "best_for": ["restaurant", "cafe", "café", "bakery", "dining", "menu"], "wants_images": True},
+    "wellness": {"name": "Wellness & Spa", "blurb": "A calm, welcoming page for treatments, practitioners, and appointments.", "best_for": ["wellness", "spa", "meditation", "therapy", "yoga", "mindfulness"], "wants_images": True},
+    "saas": {"name": "Software Product", "blurb": "Explain the product, show its value, and guide visitors to a demo or sign-up.", "best_for": ["software", "saas", "platform", "startup", "technology", "app"], "wants_images": False},
+    "product": {"name": "Product Launch", "blurb": "A focused product story with benefits, details, and a clear buying action.", "best_for": ["product launch", "product", "shop", "ecommerce", "e-commerce"], "wants_images": True},
+    "course": {"name": "Online Course", "blurb": "Present what students will learn, who teaches it, and how to enroll.", "best_for": ["course", "class", "curriculum", "learn", "education", "instructor"], "wants_images": True},
+    "newsletter": {"name": "Newsletter", "blurb": "Introduce your publication, sample the latest issue, and invite subscriptions.", "best_for": ["newsletter", "publication", "substack", "journal", "writing"], "wants_images": False},
+    "podcast": {"name": "Podcast", "blurb": "Feature the show, recent episodes, hosts, and where to listen.", "best_for": ["podcast", "episodes", "show", "host", "audio"], "wants_images": True},
+    "wedding": {"name": "Wedding & Celebration", "blurb": "Share the date, story, schedule, venue, and RSVP details.", "best_for": ["wedding", "celebration", "anniversary", "ceremony", "rsvp"], "wants_images": True},
+    "nonprofit": {"name": "Nonprofit & Community", "blurb": "Make your mission clear and help people support or join your work.", "best_for": ["nonprofit", "non-profit", "charity", "foundation", "community", "cause"], "wants_images": True},
+    "real_estate": {"name": "Real Estate", "blurb": "Showcase properties, neighborhood knowledge, and a simple way to enquire.", "best_for": ["real estate", "property", "realtor", "broker", "homes", "rentals"], "wants_images": True},
+    "hospitality": {"name": "Stay & Hospitality", "blurb": "Set the scene for your stay with rooms, amenities, location, and booking details.", "best_for": ["hotel", "homestay", "hospitality", "resort", "guesthouse", "accommodation"], "wants_images": True},
+    "fitness": {"name": "Fitness & Coaching", "blurb": "Introduce your approach, programs, coaches, schedule, and first session.", "best_for": ["fitness", "gym", "personal trainer", "training", "sports", "coach"], "wants_images": True},
+    "resume": {"name": "Resume & Profile", "blurb": "A clear professional introduction with experience, skills, and contact links.", "best_for": ["resume", "cv", "career", "job seeker", "professional profile"], "wants_images": False},
+    "creator": {"name": "Creator & Artist", "blurb": "Put your latest work, channels, and collaborations in one vivid place.", "best_for": ["creator", "influencer", "artist", "streamer", "youtube", "social"], "wants_images": True},
 }
 
 #: Theme keys the frontend has palettes for. `slate` is the safe default.
