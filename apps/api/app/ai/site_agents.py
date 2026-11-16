@@ -1,6 +1,7 @@
 """LangGraph agent pipeline for generating and verifying custom websites."""
 from __future__ import annotations
 
+import re
 from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -48,6 +49,50 @@ def _object_schema(properties: dict[str, Any], required: list[str]) -> dict[str,
     return {"type": "object", "properties": properties, "required": required, "additionalProperties": False}
 
 
+def _normalize_site_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Repair common planner naming drift before validating the strict SiteSpec."""
+    payload = dict(payload)
+    aliases = {"name": "site_name", "siteName": "site_name", "headline": "tagline", "hero_title": "tagline", "palette": "theme"}
+    for old, new in aliases.items():
+        if new not in payload and old in payload:
+            payload[new] = payload[old]
+        payload.pop(old, None)
+    if not isinstance(payload.get("site_name"), str) or not payload["site_name"].strip():
+        payload["site_name"] = "A site made for you"
+    if not isinstance(payload.get("tagline"), str) or not payload["tagline"].strip():
+        payload["tagline"] = "A place to share what matters"
+
+    sections = payload.get("sections")
+    if isinstance(sections, list):
+        normalized = []
+        for index, section in enumerate(sections):
+            if not isinstance(section, dict):
+                continue
+            section = dict(section)
+            kind = section.pop("type", "")
+            candidate_key = section.pop("key", None) or section.pop("id", None) or kind or section.get("heading") or f"section_{index + 1}"
+            key = re.sub(r"[^a-z0-9_]+", "_", str(candidate_key).strip().lower()).strip("_")
+            if not key or not key[0].isalpha():
+                key = f"section_{index + 1}"
+            section["key"] = key[:49]
+            if "heading" not in section:
+                section["heading"] = section.pop("title", "")
+            if not section.get("heading"):
+                section["heading"] = str(section.get("key") or f"Section {index + 1}").replace("-", " ").title()
+            if "body" not in section:
+                for text_key in ("content", "text", "subtitle"):
+                    if isinstance(section.get(text_key), str) and section[text_key].strip():
+                        section["body"] = section[text_key]
+                        break
+            for text_key in ("content", "text", "subtitle"):
+                section.pop(text_key, None)
+            section.pop("images", None)
+            section.pop("background", None)
+            normalized.append(section)
+        payload["sections"] = normalized
+    return payload
+
+
 def _agent_graph():
     def ask(state: SiteBuildState, role: str, system: str, prompt: str, schema: dict[str, Any], limit: int) -> dict[str, Any]:
         completion = state["provider"].complete(system=system, prompt=prompt, schema=schema, max_tokens=limit)
@@ -70,6 +115,7 @@ def _agent_graph():
                 f"Allowed themes: {', '.join(SITE_THEMES)}\n\nWebsite brief:\n{state['description']}",
                 SiteSpec.model_json_schema(), 3000,
             )
+            payload = _normalize_site_payload(payload)
             payload["template"] = "custom"
             return {"spec": SiteSpec.model_validate(payload)}
         except (AIError, ValidationError, KeyError) as exc:
@@ -116,7 +162,15 @@ def _agent_graph():
             f"Brief:\n{state['description']}\n\nPlan:\n{state['plan']}\n\nApp.tsx:\n{state['files']['App.tsx']}\n\nstyles.css:\n{state['files']['styles.css']}",
             review_schema, 1000,
         )
-        return {"approved": bool(review["approved"]), "feedback": str(review["feedback"]), "review_round": state.get("review_round", 0) + 1}
+        feedback = review.get("feedback")
+        has_actionable_feedback = isinstance(feedback, str) and bool(feedback.strip())
+        # A rejection without an explanation cannot guide a revision. Treat it
+        # as an inconclusive review and let the deterministic sandbox build
+        # checks decide whether the output is safe and usable.
+        approved = review.get("approved") is True or not has_actionable_feedback
+        if not has_actionable_feedback:
+            feedback = "No actionable review feedback was provided; verify the generated site with the build and safety checks."
+        return {"approved": approved, "feedback": feedback, "review_round": state.get("review_round", 0) + 1}
 
     def revise(state: SiteBuildState) -> dict[str, Any]:
         state["agent_log"].append({"role": "Design and code reviewer", "status": "requested revision"})

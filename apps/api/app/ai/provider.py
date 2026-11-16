@@ -273,7 +273,25 @@ class GroqProvider(AIProvider):
         try:
             response = self._client.chat.completions.create(**request)
         except Exception as exc:  # noqa: BLE001
-            raise AIError(f"Groq could not be reached: {exc}") from exc
+            # JSON mode can reject a generation before returning its content.
+            # Retry once in ordinary chat mode; parse_json and the caller's
+            # schema validator remain the enforcement boundary.
+            error = getattr(exc, "body", None) or {}
+            detail = error.get("error", error) if isinstance(error, dict) else {}
+            code = detail.get("code") if isinstance(detail, dict) else None
+            if schema is not None and code == "json_validate_failed":
+                retry_request = {**request}
+                retry_request.pop("response_format", None)
+                retry_request["messages"] = [*request["messages"], {
+                    "role": "user",
+                    "content": "Retry the answer as exactly one valid JSON object. Include no markdown or text outside the JSON.",
+                }]
+                try:
+                    response = self._client.chat.completions.create(**retry_request)
+                except Exception as retry_exc:  # noqa: BLE001
+                    raise AIError(f"Groq could not be reached: {retry_exc}") from retry_exc
+            else:
+                raise AIError(f"Groq could not be reached: {exc}") from exc
 
         usage = response.usage
         return Completion(
